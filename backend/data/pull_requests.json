@@ -1,8 +1,10 @@
 [
-  {"number": 11, "title": "EXP-101 Expense form validation", "author": "maya.lee", "status": "merged", "created_at": "2026-08-09", "linked_issue": "EXP-101", "approvals": 1},
-  {"number": 12, "title": "EXP-102 Approval API", "author": "alex.tan", "status": "merged", "created_at": "2026-08-12", "linked_issue": "EXP-102", "approvals": 2},
-  {"number": 14, "title": "EXP-104 Receipt validation", "author": "maya.lee", "status": "open", "created_at": "2026-08-18", "linked_issue": "EXP-104", "approvals": 0},
-  {"number": 18, "title": "EXP-110 Approval test coverage", "author": "sofia.lim", "status": "open", "created_at": "2026-08-27", "linked_issue": "EXP-110", "approvals": 0},
-  {"number": 19, "title": "EXP-112 CI health probe", "author": "ravi.kumar", "status": "open", "created_at": "2026-08-29", "linked_issue": "EXP-112", "approvals": 1}
+  {"number":81,"title":"OPS-241 Claim validation","author":"bryan","status":"merged","created_at":"2026-08-06","linked_issue":"OPS-241","approvals":2},
+  {"number":84,"title":"OPS-245 Dashboard navigation","author":"ng.jin","status":"merged","created_at":"2026-08-11","linked_issue":"OPS-245","approvals":1},
+  {"number":89,"title":"OPS-249 Approval activity feed","author":"yi.san","status":"open","created_at":"2026-08-26","linked_issue":"OPS-249","approvals":0},
+  {"number":91,"title":"OPS-252 Deployment probes","author":"roland","status":"open","created_at":"2026-08-15","linked_issue":"OPS-252","approvals":1},
+  {"number":93,"title":"OPS-255 Session renewal","author":"dickson","status":"merged","created_at":"2026-08-20","linked_issue":"OPS-255","approvals":2},
+  {"number":96,"title":"OPS-258 Approval regression suite","author":"cynthia","status":"open","created_at":"2026-08-27","linked_issue":"OPS-258","approvals":0},
+  {"number":97,"title":"OPS-261 Mobile receipt capture","author":"yam.nee","status":"open","created_at":"2026-08-21","linked_issue":"OPS-261","approvals":0},
+  {"number":99,"title":"OPS-264 Cache reference data","author":"bryan","status":"open","created_at":"2026-08-29","linked_issue":"OPS-264","approvals":0}
 ]
-

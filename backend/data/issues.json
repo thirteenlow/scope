@@ -1,11 +1,13 @@
 [
-  {"key": "EXP-101", "summary": "Add expense form validation", "status": "Done", "assignee": "maya.lee", "updated_at": "2026-08-12", "blocked_reason": null, "planned": true},
-  {"key": "EXP-102", "summary": "Create expense approval API", "status": "Done", "assignee": "alex.tan", "updated_at": "2026-08-15", "blocked_reason": null, "planned": true},
-  {"key": "EXP-104", "summary": "Add receipt upload validation", "status": "Blocked", "assignee": "maya.lee", "updated_at": "2026-08-20", "blocked_reason": "Waiting for security requirements", "planned": true},
-  {"key": "EXP-107", "summary": "Improve deployment health checks", "status": "In Progress", "assignee": "ravi.kumar", "updated_at": "2026-08-14", "blocked_reason": null, "planned": true},
-  {"key": "EXP-109", "summary": "Fix expired refresh-token handling", "status": "Done", "assignee": "alex.tan", "updated_at": "2026-08-24", "blocked_reason": null, "planned": false},
-  {"key": "EXP-110", "summary": "Add end-to-end approval tests", "status": "In Progress", "assignee": "sofia.lim", "updated_at": "2026-08-28", "blocked_reason": null, "planned": true},
-  {"key": "EXP-112", "summary": "Stabilize CI integration tests", "status": "In Progress", "assignee": "ravi.kumar", "updated_at": "2026-08-29", "blocked_reason": null, "planned": true},
-  {"key": "EXP-114", "summary": "Document regression test process", "status": "To Do", "assignee": "sofia.lim", "updated_at": "2026-08-18", "blocked_reason": null, "planned": true}
+  {"key":"OPS-241","summary":"Add claim submission validation","status":"Done","assignee":"bryan","updated_at":"2026-08-08","due_date":"2026-08-09","blocked_reason":null,"planned":true},
+  {"key":"OPS-245","summary":"Refresh dashboard navigation","status":"Done","assignee":"ng.jin","updated_at":"2026-08-13","due_date":"2026-08-14","blocked_reason":null,"planned":true},
+  {"key":"OPS-249","summary":"Implement approval activity feed","status":"In Progress","assignee":"yi.san","updated_at":"2026-08-27","due_date":"2026-09-02","blocked_reason":null,"planned":true},
+  {"key":"OPS-252","summary":"Add deployment health probes","status":"In Progress","assignee":"roland","updated_at":"2026-08-16","due_date":"2026-08-31","blocked_reason":null,"planned":true},
+  {"key":"OPS-255","summary":"Fix expired session renewal","status":"Done","assignee":"dickson","updated_at":"2026-08-21","due_date":"2026-08-21","blocked_reason":null,"planned":false},
+  {"key":"OPS-258","summary":"Automate approval regression tests","status":"In Progress","assignee":"cynthia","updated_at":"2026-08-28","due_date":"2026-09-04","blocked_reason":null,"planned":true},
+  {"key":"OPS-261","summary":"Improve mobile receipt capture","status":"Blocked","assignee":"yam.nee","updated_at":"2026-08-22","due_date":"2026-08-31","blocked_reason":"Waiting for camera permission guidance","planned":true},
+  {"key":"OPS-264","summary":"Reduce API response latency","status":"In Progress","assignee":"bryan","updated_at":"2026-08-29","due_date":"2026-09-05","blocked_reason":null,"planned":true},
+  {"key":"OPS-266","summary":"Create empty-state components","status":"To Do","assignee":"ng.jin","updated_at":"2026-08-25","due_date":"2026-09-06","blocked_reason":null,"planned":true},
+  {"key":"OPS-268","summary":"Document release rollback process","status":"To Do","assignee":"roland","updated_at":"2026-08-26","due_date":"2026-09-07","blocked_reason":null,"planned":true}
 ]
 

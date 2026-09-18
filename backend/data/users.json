@@ -1,0 +1,11 @@
+[
+  {"id":"bryan","name":"Bryan","role":"developer","title":"Backend developer","avatar":"BR"},
+  {"id":"ng.jin","name":"Ng Jin","role":"developer","title":"Frontend developer","avatar":"NJ"},
+  {"id":"yi.san","name":"Yi San","role":"developer","title":"Full-stack developer","avatar":"YS"},
+  {"id":"roland","name":"Roland","role":"developer","title":"Platform engineer","avatar":"RO"},
+  {"id":"dickson","name":"Dickson","role":"developer","title":"Backend developer","avatar":"DI"},
+  {"id":"cynthia","name":"Cynthia","role":"developer","title":"QA engineer","avatar":"CY"},
+  {"id":"yam.nee","name":"Yam Nee","role":"developer","title":"Mobile developer","avatar":"YN"},
+  {"id":"weifa","name":"Weifa","role":"pm","title":"Product manager","avatar":"WF"}
+]
+

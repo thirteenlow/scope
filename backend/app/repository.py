@@ -4,8 +4,7 @@ from typing import TypeVar
 
 from pydantic import BaseModel
 
-from .models import Commit, Developer, Issue, PullRequest
-
+from .models import Commit, Issue, PullRequest, User
 
 DATA_DIR = Path(__file__).resolve().parent.parent / "data"
 ModelT = TypeVar("ModelT", bound=BaseModel)
@@ -16,8 +15,8 @@ def _load(filename: str, model: type[ModelT]) -> list[ModelT]:
     return [model.model_validate(item) for item in raw]
 
 
-def get_developers() -> list[Developer]:
-    return _load("developers.json", Developer)
+def get_users() -> list[User]:
+    return _load("users.json", User)
 
 
 def get_issues() -> list[Issue]:
