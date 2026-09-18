@@ -1,0 +1,9 @@
+[
+  {"sha": "a7f12c1", "message": "EXP-101 validate expense amount", "author": "maya.lee", "committed_at": "2026-08-10", "issue_key": "EXP-101"},
+  {"sha": "c2dd918", "message": "EXP-102 add approval endpoint", "author": "alex.tan", "committed_at": "2026-08-13", "issue_key": "EXP-102"},
+  {"sha": "f8a021d", "message": "EXP-104 restrict receipt file size", "author": "maya.lee", "committed_at": "2026-08-18", "issue_key": "EXP-104"},
+  {"sha": "31bc22a", "message": "EXP-109 handle expired refresh token", "author": "alex.tan", "committed_at": "2026-08-23", "issue_key": "EXP-109"},
+  {"sha": "8d10ac4", "message": "EXP-110 add approval happy path", "author": "sofia.lim", "committed_at": "2026-08-27", "issue_key": "EXP-110"},
+  {"sha": "e902b76", "message": "EXP-112 retry CI health probe", "author": "ravi.kumar", "committed_at": "2026-08-29", "issue_key": "EXP-112"}
+]
+

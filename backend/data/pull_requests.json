@@ -1,0 +1,8 @@
+[
+  {"number": 11, "title": "EXP-101 Expense form validation", "author": "maya.lee", "status": "merged", "created_at": "2026-08-09", "linked_issue": "EXP-101", "approvals": 1},
+  {"number": 12, "title": "EXP-102 Approval API", "author": "alex.tan", "status": "merged", "created_at": "2026-08-12", "linked_issue": "EXP-102", "approvals": 2},
+  {"number": 14, "title": "EXP-104 Receipt validation", "author": "maya.lee", "status": "open", "created_at": "2026-08-18", "linked_issue": "EXP-104", "approvals": 0},
+  {"number": 18, "title": "EXP-110 Approval test coverage", "author": "sofia.lim", "status": "open", "created_at": "2026-08-27", "linked_issue": "EXP-110", "approvals": 0},
+  {"number": 19, "title": "EXP-112 CI health probe", "author": "ravi.kumar", "status": "open", "created_at": "2026-08-29", "linked_issue": "EXP-112", "approvals": 1}
+]
+

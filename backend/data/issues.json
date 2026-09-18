@@ -1,0 +1,11 @@
+[
+  {"key": "EXP-101", "summary": "Add expense form validation", "status": "Done", "assignee": "maya.lee", "updated_at": "2026-08-12", "blocked_reason": null, "planned": true},
+  {"key": "EXP-102", "summary": "Create expense approval API", "status": "Done", "assignee": "alex.tan", "updated_at": "2026-08-15", "blocked_reason": null, "planned": true},
+  {"key": "EXP-104", "summary": "Add receipt upload validation", "status": "Blocked", "assignee": "maya.lee", "updated_at": "2026-08-20", "blocked_reason": "Waiting for security requirements", "planned": true},
+  {"key": "EXP-107", "summary": "Improve deployment health checks", "status": "In Progress", "assignee": "ravi.kumar", "updated_at": "2026-08-14", "blocked_reason": null, "planned": true},
+  {"key": "EXP-109", "summary": "Fix expired refresh-token handling", "status": "Done", "assignee": "alex.tan", "updated_at": "2026-08-24", "blocked_reason": null, "planned": false},
+  {"key": "EXP-110", "summary": "Add end-to-end approval tests", "status": "In Progress", "assignee": "sofia.lim", "updated_at": "2026-08-28", "blocked_reason": null, "planned": true},
+  {"key": "EXP-112", "summary": "Stabilize CI integration tests", "status": "In Progress", "assignee": "ravi.kumar", "updated_at": "2026-08-29", "blocked_reason": null, "planned": true},
+  {"key": "EXP-114", "summary": "Document regression test process", "status": "To Do", "assignee": "sofia.lim", "updated_at": "2026-08-18", "blocked_reason": null, "planned": true}
+]
+

@@ -1,29 +1,10 @@
-# Environment files
+.venv/
+__pycache__/
+.pytest_cache/
+*.py[cod]
+node_modules/
+dist/
 .env
 .env.local
-*.env.local
+*.db
 
-# Python
-__pycache__/
-*.py[cod]
-.pytest_cache/
-backend/.venv/
-
-# Node
-node_modules/
-.next/
-out/
-
-# Local database
-data/*.db
-data/*.sqlite
-data/*.sqlite3
-
-# Editors and operating systems
-.vscode/
-.idea/
-.DS_Store
-Thumbs.db
-
-# Logs
-*.log
