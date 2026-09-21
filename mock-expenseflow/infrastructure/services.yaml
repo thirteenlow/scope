@@ -1,0 +1,10 @@
+services:
+  expense-api:
+    replicas: 3
+    owner: expense-platform
+  approval-service:
+    replicas: 2
+    owner: workflow-team
+  notification-service:
+    replicas: 2
+    owner: platform

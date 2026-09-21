@@ -1,14 +1,90 @@
-export type Role = "developer" | "pm";
-export type Category = "completed" | "in_progress" | "blocker";
+export type View = "brief" | "analysis" | "plan" | "codebase" | "jira";
 
-export type User = { id: string; name: string; role: Role; title: string; avatar: string };
-export type Evidence = { source: "jira" | "git" | "manual"; label: string; reference: string; url: string | null };
-export type UpdateItem = { id: string; developer_id: string; title: string; detail: string; category: Category; target_date: string | null; evidence: Evidence[]; source: "suggested" | "manual" };
-export type Suggestion = { id: string; developer_id: string; title: string; detail: string; category: Category; occurred_at: string; evidence: Evidence[] };
-export type DeveloperUpdate = { developer: User; items: UpdateItem[]; suggestions: Suggestion[]; approved: boolean };
-export type Issue = { key: string; summary: string; status: string; assignee: string; updated_at: string; due_date: string | null; blocked_reason: string | null; planned: boolean };
-export type Dashboard = { month: string; meeting_date: string; completed: number; active: number; blocked: number; stale: number; open_reviews: number; planned_percent: number; issues: Issue[] };
-export type Insight = { id: string; severity: "info" | "warning" | "positive"; title: string; detail: string; evidence: string[] };
-export type CalendarEvent = { id: string; date: string; title: string; kind: "meeting" | "cutoff" | "issue" | "review"; owner: string | null };
-export type MeetingAction = { id: string; action: "create_issue" | "carry_over"; title: string; issue_key: string | null; owner: string | null; approved: boolean };
-export type MeetingWorkspace = { month: string; meeting_date: string; notes: string; actions: MeetingAction[]; approved_updates: number; total_updates: number };
+export type Feature = {
+  id: string;
+  title: string;
+  description: string;
+  target_weeks: number;
+  owner: string;
+  status: "draft" | "analyzed" | "approved" | "synced";
+  created_at: string;
+  selected_option?: string;
+};
+
+export type Evidence = {
+  id: string;
+  type: "verified" | "inferred" | "question";
+  title: string;
+  detail: string;
+  path?: string;
+  line?: number;
+  confidence: number;
+};
+
+export type ScopeOption = {
+  id: string;
+  name: string;
+  duration: string;
+  confidence: "high" | "medium" | "low";
+  summary: string;
+  includes: string[];
+  excludes: string[];
+  recommended: boolean;
+};
+
+export type PlanItem = {
+  temp_key: string;
+  type: "Epic" | "Story" | "Task" | "Spike";
+  title: string;
+  description: string;
+  parent?: string;
+  estimate?: number;
+  discipline?: string;
+  evidence_ids: string[];
+};
+
+export type Analysis = {
+  feature_id: string;
+  verdict: string;
+  feasibility: number;
+  timeline_confidence: number;
+  risk: "low" | "medium" | "high";
+  summary: string;
+  affected_areas: string[];
+  evidence: Evidence[];
+  options: ScopeOption[];
+  plan: PlanItem[];
+  questions: string[];
+};
+
+export type JiraIssue = {
+  key: string;
+  type: "Epic" | "Story" | "Task" | "Spike";
+  summary: string;
+  description: string;
+  status: string;
+  parent?: string;
+  estimate?: number;
+  assignee?: string;
+  labels: string[];
+  evidence_paths: string[];
+};
+
+export type RepoNode = { name: string; path: string; type: "file" | "folder"; children?: RepoNode[] };
+export type RepoFile = { path: string; language: string; content: string; lines: number };
+export type Bootstrap = {
+  repository: { name: string; branch: string; commit: string; files: number; services: number; languages: { name: string; value: number }[]; indexed_at: string };
+  features: Feature[];
+  jira: JiraIssue[];
+  team: { name: string; role: string; initials: string }[];
+};
+
+export type ChatMessage = {
+  id: string;
+  role: "user" | "assistant";
+  content: string;
+  createdAt: string;
+};
+
+export type LlmStatus = { configured: boolean; provider: string; model: string };
+export type ChatResponse = { message: string; model: string; analysis?: Analysis; feature_id?: string };

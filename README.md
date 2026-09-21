@@ -1,63 +1,93 @@
-# Sync
+# Scope
 
-Sync turns simulated Jira and Git activity into evidence-backed monthly team updates.
+Scope is a code-aware feature planning assistant. A product manager discusses a feature and target timeline with Claude; Scope supplies context from a simulated existing product (ExpenseFlow), turns the conversation into evidence-backed scope options and engineering work, and syncs approved work into a simulated Jira workspace.
 
-## Prototype features
+The project intentionally uses local mock integrations so it can be demonstrated without access to a company repository or Jira tenant.
 
-- Simulated login for four developers and one PM
-- Backend-enforced ownership: developers edit only their update; PM edits all
-- Commit-derived update suggestions bounded by the monthly meeting cycle
-- Editable completed, in-progress, and blocker items
-- Clickable simulated Jira issues and Git commits
-- In-context cycle timeline for review cutoff and monthly meeting
-- Meeting notes with reviewable Jira create/carry-over actions
-- Explainable rule-based insights and delivery charts
+## Stack
 
-The identity switcher is a demo replacement for SSO. Application state is held
-in memory and resets when FastAPI restarts; the next production step is a real
-database and authentication provider.
+- Frontend: React 19, TypeScript, Vite
+- Backend: FastAPI, Pydantic, pytest
+- Mock existing product: `mock-expenseflow/`
+- LLM: Anthropic Messages API (Claude), called only from FastAPI
+- Simulated integrations: ExpenseFlow repository browser and Jira issue workspace
 
-## Requirements
+## Run it
 
-- Python 3.11+
-- Node.js 20.19+ or 22.12+
+Open two terminals.
 
-## Backend
+### Backend
 
-```powershell
+```bash
 cd backend
-python -m venv .venv
-.\.venv\Scripts\Activate.ps1
+py -3.12 -m venv .venv
+
+# Windows PowerShell
+.venv\Scripts\Activate.ps1
+
+# macOS/Linux
+source .venv/bin/activate
+
 pip install -r requirements.txt
-fastapi dev app/main.py --port 8000
+
+# Copy .env.example to .env, then add your Anthropic API key
+# Windows PowerShell:
+Copy-Item .env.example .env
+
+# Edit .env so it contains:
+# ANTHROPIC_API_KEY=your_real_key_here
+# ANTHROPIC_MODEL=claude-sonnet-5
+
+uvicorn app.main:app --reload --port 8000
 ```
 
-API documentation: http://localhost:8000/docs
+### Frontend
 
-## Frontend
-
-```powershell
+```bash
 cd frontend
 npm install
 npm run dev
 ```
 
-Application: http://localhost:5173
+Open <http://localhost:5173>. The frontend expects the API at `http://localhost:8000`; override this with `VITE_API_URL` if needed.
+
+## Recommended demo
+
+1. Ask Scope: “Allow employees to edit a submitted expense for 24 hours. We need it within four weeks.”
+2. Answer Claude's high-value clarification questions in the same conversation.
+3. Click **Generate plan** when the brief is ready.
+4. Compare the generated scope options in the plan drawer.
+5. Inspect the linked repository evidence if needed.
+6. Approve one option and create its epic, stories, and tasks in mock Jira.
+
+## What is simulated
+
+- Repository indexing and file citations read the local `mock-expenseflow` directory.
+- Repository access and Jira writes are simulated locally.
+- Feature discussion and plan generation use the real Anthropic API when `ANTHROPIC_API_KEY` is configured.
+- Jira creation writes to in-memory backend state and resets when the API restarts.
+
+## API-key safety
+
+- Put the key only in `backend/.env`; never add it to `frontend/.env`.
+- `.env` is excluded by `.gitignore` and must not be committed.
+- The browser sends conversation text to FastAPI. FastAPI adds code context and calls Anthropic server-side.
+- The prototype sends selected ExpenseFlow source files to Claude. A production version should add repository permissions, secret scanning, context redaction, audit logging, and retention controls.
+
+## Replacing mocks with real integrations
+
+- Replace `backend/app/repository.py` with a GitHub App adapter that clones or retrieves permitted files, metadata, and pull requests.
+- Replace Jira mutation methods in `backend/app/state.py` with OAuth-backed Jira Cloud REST calls.
+- Keep the approval gate: analysis may draft work, but only an explicit user action should create Jira issues.
+- Add embeddings or a code graph for large repositories, then provide only retrieved, permission-filtered context to the LLM.
+- Store every conclusion as `verified`, `inferred`, or `open_question`, with source paths and reviewer state.
 
 ## Tests
 
-```powershell
+```bash
 cd backend
-.\.venv\Scripts\Activate.ps1
 pytest
+
+cd ../frontend
+npm run build
 ```
-
-## Demo workflow
-
-1. Use the identity switcher to compare developer and PM permissions.
-2. Accept a Git-derived suggestion or create a manual blocker.
-3. Open its simulated Jira/Git evidence, rendered as realistic product pages.
-4. Review the cycle calendar and mark updates ready.
-5. Sign in as Weifa (PM), record meeting notes, and propose Jira actions.
-
-All people, projects, issues, commits, and pull requests are fictional.

@@ -2,147 +2,110 @@ from typing import Literal
 
 from pydantic import BaseModel, Field
 
-Role = Literal["developer", "pm"]
-Category = Literal["completed", "in_progress", "blocker"]
+
+class FeatureCreate(BaseModel):
+    title: str = Field(min_length=3, max_length=120)
+    description: str = Field(min_length=10, max_length=2000)
+    target_weeks: int = Field(ge=1, le=52)
 
 
-class User(BaseModel):
+class FeatureRequest(FeatureCreate):
     id: str
-    name: str
-    role: Role
-    title: str
-    avatar: str
-
-
-class Issue(BaseModel):
-    key: str
-    summary: str
-    status: Literal["To Do", "In Progress", "Blocked", "Done"]
-    assignee: str
-    updated_at: str
-    due_date: str | None = None
-    blocked_reason: str | None = None
-    planned: bool = True
-
-
-class PullRequest(BaseModel):
-    number: int
-    title: str
-    author: str
-    status: Literal["open", "merged"]
+    owner: str
+    status: Literal["draft", "analyzed", "approved", "synced"]
     created_at: str
-    linked_issue: str
-    approvals: int = 0
-
-
-class Commit(BaseModel):
-    sha: str
-    message: str
-    author: str
-    committed_at: str
-    issue_key: str
+    selected_option: str | None = None
 
 
 class Evidence(BaseModel):
-    source: Literal["jira", "git", "manual"]
-    label: str
-    reference: str
-    url: str | None = None
-
-
-class Suggestion(BaseModel):
     id: str
-    developer_id: str
+    type: Literal["verified", "inferred", "question"]
     title: str
     detail: str
-    category: Category
-    occurred_at: str
+    path: str | None = None
+    line: int | None = None
+    confidence: int
+
+
+class ScopeOption(BaseModel):
+    id: str
+    name: str
+    duration: str
+    confidence: Literal["high", "medium", "low"]
+    summary: str
+    includes: list[str]
+    excludes: list[str]
+    recommended: bool = False
+
+
+class PlanItem(BaseModel):
+    temp_key: str
+    type: Literal["Epic", "Story", "Task", "Spike"]
+    title: str
+    description: str
+    parent: str | None = None
+    estimate: int | None = None
+    discipline: str | None = None
+    evidence_ids: list[str] = []
+
+
+class AnalysisResult(BaseModel):
+    feature_id: str
+    verdict: str
+    feasibility: int
+    timeline_confidence: int
+    risk: Literal["low", "medium", "high"]
+    summary: str
+    affected_areas: list[str]
     evidence: list[Evidence]
+    options: list[ScopeOption]
+    plan: list[PlanItem]
+    questions: list[str]
 
 
-class UpdateItem(BaseModel):
-    id: str
-    developer_id: str
-    title: str
-    detail: str = ""
-    category: Category
-    target_date: str | None = None
-    evidence: list[Evidence] = Field(default_factory=list)
-    source: Literal["suggested", "manual"] = "manual"
+class ApprovalRequest(BaseModel):
+    option_id: str
 
 
-class UpdateItemCreate(BaseModel):
-    title: str = Field(min_length=2, max_length=160)
-    detail: str = Field(default="", max_length=1000)
-    category: Category
-    target_date: str | None = None
+class JiraIssue(BaseModel):
+    key: str
+    type: Literal["Epic", "Story", "Task", "Spike"]
+    summary: str
+    description: str
+    status: str
+    parent: str | None = None
+    estimate: int | None = None
+    assignee: str | None = None
+    labels: list[str] = []
+    evidence_paths: list[str] = []
 
 
-class UpdateItemPatch(BaseModel):
-    title: str | None = Field(default=None, min_length=2, max_length=160)
-    detail: str | None = Field(default=None, max_length=1000)
-    category: Category | None = None
-    target_date: str | None = None
+class RepoNode(BaseModel):
+    name: str
+    path: str
+    type: Literal["file", "folder"]
+    children: list["RepoNode"] | None = None
 
 
-class AcceptSuggestion(BaseModel):
-    title: str | None = Field(default=None, min_length=2, max_length=160)
-    detail: str | None = Field(default=None, max_length=1000)
-    category: Category | None = None
+class ChatMessage(BaseModel):
+    role: Literal["user", "assistant"]
+    content: str = Field(min_length=1, max_length=8000)
 
 
-class DeveloperUpdate(BaseModel):
-    developer: User
-    items: list[UpdateItem]
-    suggestions: list[Suggestion]
-    approved: bool = False
+class ChatRequest(BaseModel):
+    messages: list[ChatMessage] = Field(min_length=1, max_length=30)
+    mode: Literal["chat", "plan"] = "chat"
+    target_weeks: int = Field(default=4, ge=1, le=52)
 
 
-class Dashboard(BaseModel):
-    month: str
-    meeting_date: str
-    completed: int
-    active: int
-    blocked: int
-    stale: int
-    open_reviews: int
-    planned_percent: int
-    issues: list[Issue]
+class ChatResponse(BaseModel):
+    message: str
+    model: str
+    analysis: AnalysisResult | None = None
+    feature_id: str | None = None
 
 
-class CalendarEvent(BaseModel):
-    id: str
-    date: str
-    title: str
-    kind: Literal["meeting", "cutoff", "issue", "review"]
-    owner: str | None = None
-
-
-class Insight(BaseModel):
-    id: str
-    severity: Literal["info", "warning", "positive"]
-    title: str
-    detail: str
-    evidence: list[str]
-
-
-class MeetingNote(BaseModel):
-    text: str = Field(max_length=5000)
-
-
-class MeetingAction(BaseModel):
-    id: str
-    action: Literal["create_issue", "carry_over"]
-    title: str
-    issue_key: str | None = None
-    owner: str | None = None
-    approved: bool = False
-
-
-class MeetingWorkspace(BaseModel):
-    month: str
-    meeting_date: str
-    notes: str
-    actions: list[MeetingAction]
-    approved_updates: int
-    total_updates: int
+class LlmStatus(BaseModel):
+    configured: bool
+    provider: str = "Anthropic"
+    model: str

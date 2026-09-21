@@ -1,87 +1,1388 @@
-import { FormEvent, useEffect, useMemo, useState } from "react";
-import { API_URL, api, setApiUser } from "./api";
-import type { Category, Dashboard, DeveloperUpdate, Insight, MeetingWorkspace, UpdateItem, User } from "./types";
+import { useEffect, useRef, useState } from "react";
+import { api } from "./api";
+import {
+  ArrowIcon,
+  CheckIcon,
+  CodeIcon,
+  FileIcon,
+  FolderIcon,
+  GitIcon,
+  JiraIcon,
+  LayersIcon,
+  SparkIcon,
+} from "./icons";
+import type {
+  Analysis,
+  Bootstrap,
+  ChatMessage,
+  JiraIssue,
+  LlmStatus,
+  RepoFile,
+  RepoNode,
+  ScopeOption,
+} from "./types";
 
-type Page = "updates" | "meeting" | "settings";
+const starterMessage: ChatMessage = {
+  id: "welcome",
+  role: "assistant",
+  content:
+    "Hi Weifa — I’m connected to the ExpenseFlow codebase. Tell me what you want to build and the delivery window. I’ll ask only the questions that materially change the plan.",
+  createdAt: "Now",
+};
 
-function EvidenceLinks({ evidence }: { evidence: UpdateItem["evidence"] }) {
-  if (!evidence.length) return <span className="manual-tag">MANUAL ENTRY</span>;
-  return <div className="evidence">{evidence.map((item) => <a key={item.reference} href={item.url ? `${API_URL}${item.url}` : "#"} target="_blank" rel="noreferrer"><span>{item.source === "git" ? "GH" : "J"}</span>{item.label}</a>)}</div>;
+type Drawer = "artifact" | "code" | "jira" | null;
+type BusyState = "chat" | "plan" | "jira" | "";
+
+function newId(): string {
+  if (
+    typeof crypto !== "undefined" &&
+    typeof crypto.randomUUID === "function"
+  ) {
+    return crypto.randomUUID();
+  }
+
+  return `${Date.now()}-${Math.random().toString(36).slice(2)}`;
 }
 
-function TeamPulse({ dashboard, insights, updates }: { dashboard: Dashboard | null; insights: Insight[]; updates: DeveloperUpdate[] }) {
-  if (!dashboard) return null;
-  const ready = updates.filter((update) => update.approved).length;
-  const stages = [
-    { label: "Done", value: dashboard.completed, tone: "done" },
-    { label: "Moving", value: dashboard.active, tone: "moving" },
-    { label: "Blocked", value: dashboard.blocked, tone: "blocked" },
-    { label: "Review", value: dashboard.open_reviews, tone: "review" },
-  ];
-  const total = Math.max(stages.reduce((sum, item) => sum + item.value, 0), 1);
-  return <section className="team-pulse">
-    <div className="pulse-lead"><span className="kicker">WEIFA'S TEAM VIEW · AUGUST</span><h1>Seven updates.<br /><em>One conversation.</em></h1><p>Work is pulled from GitHub, matched to Jira, then confirmed by the person who did it.</p></div>
-    <div className="readiness-board"><div className="readiness-number"><strong>{ready}</strong><span>of {updates.length} ready</span></div><div className="readiness-rule"><i style={{ width: `${updates.length ? ready / updates.length * 100 : 0}%` }} /></div><small>Review closes 28 Aug · Meeting 31 Aug</small></div>
-    <div className="flow-board"><div className="flow-title"><span>DELIVERY MIX</span><strong>{total} tracked signals</strong></div><div className="stacked-flow">{stages.map((stage) => <i className={stage.tone} style={{ width: `${stage.value / total * 100}%` }} key={stage.label} />)}</div><div className="flow-legend">{stages.map((stage) => <span key={stage.label}><i className={stage.tone} />{stage.label} <b>{stage.value}</b></span>)}</div></div>
-    <div className="signal-board"><span className="kicker">NEEDS A LOOK</span>{insights.slice(0, 2).map((item) => <div className="signal-row" key={item.id}><i className={item.severity} /><div><strong>{item.title}</strong><p>{item.detail}</p></div><small>{item.evidence.join(" · ")}</small></div>)}</div>
-  </section>;
-}
-
-function ItemEditor({ item, onSave, onCancel }: { item?: UpdateItem; onSave: (data: { title: string; detail: string; category: Category; target_date: string | null }) => void; onCancel: () => void }) {
-  const [title, setTitle] = useState(item?.title ?? "");
-  const [detail, setDetail] = useState(item?.detail ?? "");
-  const [category, setCategory] = useState<Category>(item?.category ?? "in_progress");
-  const [date, setDate] = useState(item?.target_date ?? "");
-  function submit(event: FormEvent) { event.preventDefault(); onSave({ title, detail, category, target_date: date || null }); }
-  return <div className="modal-backdrop"><form className="modal" onSubmit={submit}><span className="kicker">UPDATE ITEM</span><h2>{item ? "Edit the wording" : "Add something missing"}</h2><label>Short update<input value={title} onChange={(event) => setTitle(event.target.value)} required minLength={2} /></label><label>Context<textarea value={detail} onChange={(event) => setDetail(event.target.value)} rows={4} /></label><div className="form-row"><label>Section<select value={category} onChange={(event) => setCategory(event.target.value as Category)}><option value="completed">Completed</option><option value="in_progress">In progress</option><option value="blocker">Blocker</option></select></label><label>Target date<input type="date" value={date} onChange={(event) => setDate(event.target.value)} /></label></div><div className="modal-actions"><button type="button" className="quiet" onClick={onCancel}>Cancel</button><button type="submit">Save</button></div></form></div>;
-}
-
-function Updates({ updates, viewer, onRefresh }: { updates: DeveloperUpdate[]; viewer: User; onRefresh: () => Promise<void> }) {
-  const [selectedId, setSelectedId] = useState("");
-  const [editing, setEditing] = useState<UpdateItem | "new" | null>(null);
-  useEffect(() => { if (!updates.some((item) => item.developer.id === selectedId)) setSelectedId(updates[0]?.developer.id ?? ""); }, [updates, selectedId]);
-  const selected = updates.find((item) => item.developer.id === selectedId) ?? updates[0];
-  const mayEdit = !!selected && (viewer.role === "pm" || viewer.id === selected.developer.id);
-  async function save(data: { title: string; detail: string; category: Category; target_date: string | null }) { if (!selected) return; if (editing && editing !== "new") await api.editItem(editing.id, data); else await api.addItem(selected.developer.id, data); setEditing(null); await onRefresh(); }
-  if (!selected) return <div className="loader">No update available.</div>;
-  return <section className={updates.length > 1 ? "updates-layout" : "updates-layout solo"}>
-    {updates.length > 1 && <aside className="roster"><span className="kicker">TEAM ROSTER</span>{updates.map((update, index) => <button key={update.developer.id} className={update.developer.id === selected.developer.id ? "roster-person active" : "roster-person"} onClick={() => setSelectedId(update.developer.id)}><span className="roster-index">0{index + 1}</span><span><strong>{update.developer.name}</strong><small>{update.approved ? "Ready" : `${update.suggestions.length} to review`}</small></span><i>{update.approved ? "●" : "○"}</i></button>)}</aside>}
-    <div className="update-sheet">
-      <header className="sheet-head"><div><span className="kicker">{viewer.role === "pm" ? "TEAM MEMBER" : "MY MONTHLY UPDATE"}</span><h1>{selected.developer.name}</h1><p>{selected.developer.title} · 01–31 August</p></div>{mayEdit && <div className="sheet-actions"><button className="quiet" onClick={() => setEditing("new")}>Add item</button><button onClick={async () => { await api.approveUpdate(selected.developer.id); await onRefresh(); }}>{selected.approved ? "Ready ✓" : "Submit update"}</button></div>}</header>
-      {!!selected.suggestions.length && <section className="capture-strip"><div className="capture-count"><strong>{selected.suggestions.length}</strong><span>GitHub suggestions</span></div><div className="capture-list">{selected.suggestions.map((suggestion) => <article className="captured-item" key={suggestion.id}><div><span className="source-label">AUTO-CAPTURED</span><strong>{suggestion.title}</strong><p>{suggestion.detail}</p><EvidenceLinks evidence={suggestion.evidence} /></div>{mayEdit && <div className="capture-actions"><button onClick={async () => { await api.acceptSuggestion(suggestion.id); await onRefresh(); }}>Keep</button><button className="quiet" onClick={async () => { await api.dismissSuggestion(suggestion.id); await onRefresh(); }}>Ignore</button></div>}</article>)}</div></section>}
-      <section className="ledger">{(["completed", "in_progress", "blocker"] as Category[]).map((category, column) => { const items = selected.items.filter((item) => item.category === category); return <div className="ledger-section" key={category}><header><span>0{column + 1}</span><h2>{category === "in_progress" ? "In progress" : category[0].toUpperCase() + category.slice(1)}</h2><b>{items.length}</b></header>{items.map((item) => <article className="ledger-item" key={item.id}><div className={`ledger-mark ${category}`} /><div className="ledger-copy"><strong>{item.title}</strong><p>{item.detail || "No additional context."}</p><EvidenceLinks evidence={item.evidence} /></div>{mayEdit && <div className="ledger-actions"><button onClick={() => setEditing(item)}>Edit</button><button onClick={async () => { await api.deleteItem(item.id); await onRefresh(); }}>Remove</button></div>}</article>)}{!items.length && <div className="ledger-empty">Nothing here yet.</div>}</div>; })}</section>
-    </div>
-    {editing && <ItemEditor item={editing === "new" ? undefined : editing} onSave={save} onCancel={() => setEditing(null)} />}
-  </section>;
-}
-
-function Meeting({ workspace, viewer, onRefresh }: { workspace: MeetingWorkspace | null; viewer: User; onRefresh: () => Promise<void> }) {
-  const [notes, setNotes] = useState("");
-  useEffect(() => setNotes(workspace?.notes ?? ""), [workspace]);
-  if (!workspace) return <div className="loader">Preparing meeting…</div>;
-  const isPm = viewer.role === "pm";
-  return <section className="meeting-page"><header className="meeting-head"><div><span className="kicker">31 AUG · MONTHLY SYNC</span><h1>The room where<br /><em>work becomes decisions.</em></h1></div><div className="meeting-ready"><strong>{workspace.approved_updates}/{workspace.total_updates}</strong><span>updates ready</span></div></header><div className="meeting-workspace"><article className="notes-sheet"><header><span className="kicker">LIVE NOTES</span>{isPm && <button className="quiet" onClick={async () => { await api.saveNotes(notes); await onRefresh(); }}>Save</button>}</header><textarea value={notes} onChange={(event) => setNotes(event.target.value)} disabled={!isPm} placeholder={isPm ? "Capture decisions, owners and dates…" : "Weifa records the meeting decisions here."} />{isPm && <button onClick={async () => { await api.saveNotes(notes); await api.suggestActions(); await onRefresh(); }}>Generate Jira proposals →</button>}</article><article className="action-sheet"><span className="kicker">PROPOSED, NOT APPLIED</span><h2>Jira actions</h2>{workspace.actions.map((action, index) => <div className="action-row" key={action.id}><span>0{index + 1}</span><div><strong>{action.title}</strong><small>{action.action.replace("_", " ")} · human approval required</small></div>{isPm && <button disabled={action.approved} onClick={async () => { await api.approveAction(action.id); await onRefresh(); }}>{action.approved ? "Approved" : "Approve"}</button>}</div>)}{!workspace.actions.length && <p className="no-actions">Meeting notes will become reviewable Jira proposals.</p>}</article></div></section>;
-}
-
-function Settings() {
-  return <section className="settings-page"><header><span className="kicker">CONNECTIONS & CYCLE</span><h1>Quiet machinery.</h1><p>Simulated integrations use the same boundary as the future GitHub App and Jira OAuth connectors.</p></header><div className="connector-list"><article><span className="connector-logo github">GH</span><div><strong>GitHub · ops-platform</strong><p>8 repositories · commits and pull requests · read only</p></div><i>CONNECTED</i></article><article><span className="connector-logo jira">J</span><div><strong>Jira · OPS project</strong><p>Issues, status and due dates · simulated write approval</p></div><i>CONNECTED</i></article></div><div className="cycle-spec"><span>UPDATE WINDOW</span><strong>01 AUG</strong><i>→</i><span>REVIEW CUT-OFF</span><strong>28 AUG</strong><i>→</i><span>TEAM MEETING</span><strong>31 AUG</strong></div></section>;
-}
-
-function App() {
-  const [page, setPage] = useState<Page>("updates");
-  const [users, setUsers] = useState<User[]>([]);
-  const [viewerId, setViewerId] = useState(localStorage.getItem("sync-user") ?? "bryan");
-  const [dashboard, setDashboard] = useState<Dashboard | null>(null);
-  const [insights, setInsights] = useState<Insight[]>([]);
-  const [updates, setUpdates] = useState<DeveloperUpdate[]>([]);
-  const [meeting, setMeeting] = useState<MeetingWorkspace | null>(null);
+export default function App() {
+  const [data, setData] = useState<Bootstrap | null>(null);
+  const [status, setStatus] = useState<LlmStatus | null>(null);
+  const [messages, setMessages] = useState<ChatMessage[]>([
+    starterMessage,
+  ]);
+  const [input, setInput] = useState("");
+  const [weeks, setWeeks] = useState(4);
+  const [analysis, setAnalysis] = useState<Analysis | null>(null);
+  const [selectedOption, setSelectedOption] = useState<
+    string | null
+  >(null);
+  const [jira, setJira] = useState<JiraIssue[]>([]);
+  const [tree, setTree] = useState<RepoNode[]>([]);
+  const [file, setFile] = useState<RepoFile | null>(null);
+  const [busy, setBusy] = useState<BusyState>("");
   const [error, setError] = useState("");
-  const viewer = useMemo(() => users.find((user) => user.id === viewerId) ?? users[0], [users, viewerId]);
-  async function loadAll() { try { const [d, i, u, m] = await Promise.all([api.dashboard(), api.insights(), api.updates(), api.meeting()]); setDashboard(d); setInsights(i); setUpdates(u); setMeeting(m); setError(""); } catch (reason) { setError(reason instanceof Error ? reason.message : "Could not reach Sync API"); } }
-  useEffect(() => { api.users().then(setUsers).catch(() => setError("Start FastAPI on port 8000.")); void loadAll(); }, []);
-  async function changeUser(id: string) { setViewerId(id); setApiUser(id); setPage("updates"); await loadAll(); }
-  const nav: [Page, string][] = viewer?.role === "pm" ? [["updates", "Team updates"], ["meeting", "Meeting"], ["settings", "Settings"]] : [["updates", "My update"], ["meeting", "Meeting summary"]];
-  return <div className="app-shell"><aside className="sidebar"><div className="brand"><div className="brand-mark">S/</div><span>sync</span></div><div className="rail-label">MONTHLY DELIVERY LOG</div><nav>{nav.map(([id, label], index) => <button className={page === id ? "active" : ""} key={id} onClick={() => setPage(id)}><span>0{index + 1}</span>{label}</button>)}</nav><div className="systems"><span><i className="gh-dot" />GitHub</span><span><i className="jira-dot" />Jira</span><small>SIMULATION ONLINE</small></div></aside><main className="main"><header className="app-header"><div className="cycle-track"><span>01 AUG</span><i /><span>28 AUG · REVIEW</span><i /><strong>31 AUG · MEETING</strong></div><div className="user-switch"><span>{viewer?.role === "pm" ? "PM VIEW" : "DEVELOPER VIEW"}</span><div className="avatar">{viewer?.avatar ?? "…"}</div><select value={viewerId} onChange={(event) => void changeUser(event.target.value)}>{users.map((user) => <option value={user.id} key={user.id}>{user.name} · {user.role.toUpperCase()}</option>)}</select></div></header><div className="content">{error && <div className="error">{error}</div>}{page === "updates" && viewer && <>{viewer.role === "pm" && <TeamPulse dashboard={dashboard} insights={insights} updates={updates} />}<Updates updates={updates} viewer={viewer} onRefresh={loadAll} /></>}{page === "meeting" && viewer && <Meeting workspace={meeting} viewer={viewer} onRefresh={loadAll} />}{page === "settings" && <Settings />}</div></main></div>;
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] =
+    useState(false);
+  const [drawer, setDrawer] = useState<Drawer>(null);
+
+  const endRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadInitialData() {
+      try {
+        const [bootstrap, repoTree, llmStatus] =
+          await Promise.all([
+            api.bootstrap(),
+            api.tree(),
+            api.llmStatus(),
+          ]);
+
+        if (cancelled) {
+          return;
+        }
+
+        setData(bootstrap);
+        setJira(bootstrap.jira);
+        setTree(repoTree);
+        setStatus(llmStatus);
+      } catch (err) {
+        if (cancelled) {
+          return;
+        }
+
+        setError(
+          err instanceof Error
+            ? err.message
+            : "Unable to load Scope",
+        );
+      }
+    }
+
+    void loadInitialData();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    endRef.current?.scrollIntoView({
+      behavior: "smooth",
+    });
+  }, [messages, busy]);
+
+  const userMessageCount = messages.filter(
+    (message) => message.role === "user",
+  ).length;
+
+  async function send(
+    mode: "chat" | "plan",
+    suggested?: string,
+  ) {
+    if (busy) {
+      return;
+    }
+
+    const text = (suggested ?? input).trim();
+    let nextMessages = messages;
+
+    if (text) {
+      const userMessage: ChatMessage = {
+        id: newId(),
+        role: "user",
+        content: text,
+        createdAt: "Now",
+      };
+
+      nextMessages = [...messages, userMessage];
+
+      setMessages(nextMessages);
+      setInput("");
+    }
+
+    const hasUserMessage = nextMessages.some(
+      (message) => message.role === "user",
+    );
+
+    if (!hasUserMessage) {
+      return;
+    }
+
+    setBusy(mode);
+    setError("");
+
+    try {
+      const result = await api.chat(
+        nextMessages,
+        mode,
+        weeks,
+      );
+
+      const assistantMessage: ChatMessage = {
+        id: newId(),
+        role: "assistant",
+        content: result.message,
+        createdAt: "Now",
+      };
+
+      setMessages((current) => [
+        ...current,
+        assistantMessage,
+      ]);
+
+      if (result.analysis) {
+        const recommendedOption =
+          result.analysis.options.find(
+            (option) => option.recommended,
+          ) ?? result.analysis.options[0];
+
+        setAnalysis(result.analysis);
+        setSelectedOption(
+          recommendedOption?.id ?? null,
+        );
+        setDrawer("artifact");
+      }
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Claude request failed",
+      );
+    } finally {
+      setBusy("");
+    }
+  }
+
+  async function createJira() {
+    if (!analysis || !selectedOption || busy) {
+      return;
+    }
+
+    setBusy("jira");
+    setError("");
+
+    try {
+      await api.approve(
+        analysis.feature_id,
+        selectedOption,
+      );
+
+      const created = await api.syncJira(
+        analysis.feature_id,
+      );
+
+      const updatedIssues = await api.jira();
+
+      setJira(updatedIssues);
+
+      setMessages((current) => [
+        ...current,
+        {
+          id: newId(),
+          role: "assistant",
+          content: `Done — ${created.length} approved work items were created in the mock ExpenseFlow Jira project.`,
+          createdAt: "Now",
+        },
+      ]);
+
+      setDrawer("jira");
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Jira sync failed",
+      );
+    } finally {
+      setBusy("");
+    }
+  }
+
+  async function openFile(path: string) {
+    setError("");
+
+    try {
+      const selectedFile = await api.file(path);
+
+      setFile(selectedFile);
+      setDrawer("code");
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Unable to open the selected file",
+      );
+    }
+  }
+
+  function newChat() {
+    setMessages([starterMessage]);
+    setAnalysis(null);
+    setSelectedOption(null);
+    setInput("");
+    setError("");
+    setDrawer(null);
+    setSidebarOpen(false);
+  }
+
+  if (!data || !status) {
+    return (
+      <div className="loading">
+        <div className="logo">S/</div>
+        <span>
+          {error || "Connecting product context…"}
+        </span>
+      </div>
+    );
+  }
+
+  return (
+    <div
+      className={`app ${
+        sidebarCollapsed ? "collapsed" : ""
+      }`}
+    >
+      {sidebarOpen && (
+        <button
+          className="scrim"
+          aria-label="Close menu"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+
+      <Sidebar
+        data={data}
+        status={status}
+        open={sidebarOpen}
+        collapsed={sidebarCollapsed}
+        close={() => setSidebarOpen(false)}
+        toggle={() =>
+          setSidebarCollapsed((current) => !current)
+        }
+        newChat={newChat}
+        openRepo={() => {
+          setFile(null);
+          setDrawer("code");
+          setSidebarOpen(false);
+        }}
+        openJira={() => {
+          setDrawer("jira");
+          setSidebarOpen(false);
+        }}
+      />
+
+      <main className="workspace">
+        <Header
+          data={data}
+          status={status}
+          openMenu={() => setSidebarOpen(true)}
+          openArtifact={() => setDrawer("artifact")}
+        />
+
+        {!status.configured && <ConfigBanner />}
+
+        {error && (
+          <div className="error-banner">
+            <span>!</span>
+            <p>{error}</p>
+            <button
+              type="button"
+              aria-label="Dismiss error"
+              onClick={() => setError("")}
+            >
+              ×
+            </button>
+          </div>
+        )}
+
+        <section className="conversation">
+          <div className="chat-width">
+            <div className="conversation-head">
+              <span className="kicker">
+                FEATURE PLANNING SESSION
+              </span>
+
+              <h1>
+                What should ExpenseFlow do next?
+              </h1>
+
+              <p>
+                Talk it through naturally. Scope keeps the
+                product and code context in the conversation.
+              </p>
+            </div>
+
+            <div className="messages">
+              {messages.map((message, index) => (
+                <Message
+                  key={message.id}
+                  message={message}
+                  model={status.model}
+                  last={
+                    index === messages.length - 1
+                  }
+                />
+              ))}
+
+              {busy && <Thinking mode={busy} />}
+
+              <div ref={endRef} />
+            </div>
+
+            {userMessageCount === 0 && (
+              <div className="prompts">
+                <Prompt
+                  n="01"
+                  title="Edit after submission"
+                  text="Assess a workflow-changing request"
+                  onClick={() =>
+                    void send(
+                      "chat",
+                      "Allow employees to edit a submitted expense for 24 hours. We need it within four weeks.",
+                    )
+                  }
+                />
+
+                <Prompt
+                  n="02"
+                  title="Receipt OCR"
+                  text="Explore an AI-assisted feature"
+                  onClick={() =>
+                    void send(
+                      "chat",
+                      "Add receipt OCR that extracts merchant, date, currency and amount, with a correction flow.",
+                    )
+                  }
+                />
+
+                <Prompt
+                  n="03"
+                  title="Multiple currencies"
+                  text="Surface hidden finance dependencies"
+                  onClick={() =>
+                    void send(
+                      "chat",
+                      "Support expenses in multiple currencies and reimburse employees in SGD.",
+                    )
+                  }
+                />
+              </div>
+            )}
+          </div>
+        </section>
+
+        <Composer
+          input={input}
+          setInput={setInput}
+          weeks={weeks}
+          setWeeks={setWeeks}
+          send={() => void send("chat")}
+          generate={() => void send("plan")}
+          disabled={
+            !status.configured || Boolean(busy)
+          }
+          canGenerate={userMessageCount > 0}
+        />
+      </main>
+
+      <ContextDrawer
+        drawer={drawer}
+        close={() => setDrawer(null)}
+        analysis={analysis}
+        selectedOption={selectedOption}
+        setSelectedOption={setSelectedOption}
+        createJira={() => void createJira()}
+        busy={busy}
+        tree={tree}
+        file={file}
+        clearFile={() => setFile(null)}
+        openFile={(path) => void openFile(path)}
+        jira={jira}
+      />
+    </div>
+  );
 }
 
-export default App;
+type SidebarProps = {
+  data: Bootstrap;
+  status: LlmStatus;
+  open: boolean;
+  collapsed: boolean;
+  close: () => void;
+  toggle: () => void;
+  newChat: () => void;
+  openRepo: () => void;
+  openJira: () => void;
+};
+
+function Sidebar({
+  data,
+  status,
+  open,
+  collapsed,
+  close,
+  toggle,
+  newChat,
+  openRepo,
+  openJira,
+}: SidebarProps) {
+  return (
+    <aside
+      className={[
+        "sidebar",
+        open ? "mobile-open" : "",
+        collapsed ? "is-collapsed" : "",
+      ].join(" ")}
+    >
+      <div className="brand">
+        <div className="logo">S/</div>
+
+        <div className="brand-copy">
+          <strong>scope</strong>
+          <span>product intelligence</span>
+        </div>
+
+        <button
+          type="button"
+          className="close-mobile"
+          aria-label="Close menu"
+          onClick={close}
+        >
+          ×
+        </button>
+      </div>
+
+      <button
+        type="button"
+        className="new-chat"
+        onClick={newChat}
+      >
+        <span>＋</span>
+        <b>New feature</b>
+      </button>
+
+      <div className="side-section">
+        <label>RECENT</label>
+
+        <button
+          type="button"
+          className="recent active"
+        >
+          <FileIcon />
+
+          <span>
+            <strong>New feature plan</strong>
+            <small>Just now</small>
+          </span>
+        </button>
+
+        <button type="button" className="recent">
+          <FileIcon />
+
+          <span>
+            <strong>Receipt OCR</strong>
+            <small>Yesterday</small>
+          </span>
+        </button>
+      </div>
+
+      <div className="side-section connections">
+        <label>CONNECTIONS</label>
+
+        <button type="button" onClick={openRepo}>
+          <GitIcon />
+
+          <span>
+            <strong>{data.repository.name}</strong>
+            <small>
+              <i /> {data.repository.files} files indexed
+            </small>
+          </span>
+        </button>
+
+        <button type="button" onClick={openJira}>
+          <JiraIcon />
+
+          <span>
+            <strong>ExpenseFlow Jira</strong>
+            <small>
+              <i /> Mock project connected
+            </small>
+          </span>
+        </button>
+
+        <button type="button">
+          <SparkIcon />
+
+          <span>
+            <strong>Claude</strong>
+            <small>
+              <i
+                className={
+                  status.configured ? "" : "off"
+                }
+              />
+
+              {status.configured
+                ? status.model
+                : "Setup required"}
+            </small>
+          </span>
+        </button>
+      </div>
+
+      <div className="side-footer">
+        <div className="avatar">W</div>
+
+        <span>
+          <strong>Weifa</strong>
+          <small>Product manager</small>
+        </span>
+
+        <button
+          type="button"
+          className="collapse-button"
+          onClick={toggle}
+          title={
+            collapsed
+              ? "Expand sidebar"
+              : "Collapse sidebar"
+          }
+        >
+          {collapsed ? "›" : "‹"}
+        </button>
+      </div>
+    </aside>
+  );
+}
+
+type HeaderProps = {
+  data: Bootstrap;
+  status: LlmStatus;
+  openMenu: () => void;
+  openArtifact: () => void;
+};
+
+function Header({
+  data,
+  status,
+  openMenu,
+  openArtifact,
+}: HeaderProps) {
+  return (
+    <header className="header">
+      <button
+        type="button"
+        className="menu-button"
+        aria-label="Open menu"
+        onClick={openMenu}
+      >
+        ☰
+      </button>
+
+      <div className="repo-chip">
+        <GitIcon />
+        <span>{data.repository.name}</span>
+        <b>{data.repository.branch}</b>
+      </div>
+
+      <div className="context-status">
+        <span />
+
+        <p>
+          <strong>Code context ready</strong>
+          <small>
+            {data.repository.commit} · indexed
+          </small>
+        </p>
+      </div>
+
+      <div className="header-right">
+        <span
+          className={`model-status ${
+            status.configured ? "" : "offline"
+          }`}
+        >
+          <SparkIcon />
+
+          {status.configured
+            ? status.model
+            : "Claude offline"}
+        </span>
+
+        <button
+          type="button"
+          className="mobile-plan"
+          onClick={openArtifact}
+        >
+          <LayersIcon />
+          <span>Plan</span>
+        </button>
+
+        <div className="team">
+          {data.team.slice(0, 3).map((member) => (
+            <i key={member.name}>
+              {member.initials}
+            </i>
+          ))}
+        </div>
+      </div>
+    </header>
+  );
+}
+
+type MessageProps = {
+  message: ChatMessage;
+  model: string;
+  last: boolean;
+};
+
+function Message({
+  message,
+  model,
+  last,
+}: MessageProps) {
+  if (message.role === "user") {
+    return (
+      <article className="message user-message">
+        <div className="avatar">W</div>
+
+        <div>
+          <div className="message-meta">
+            <strong>You</strong>
+            <span>{message.createdAt}</span>
+          </div>
+
+          <p>{message.content}</p>
+        </div>
+      </article>
+    );
+  }
+
+  return (
+    <article
+      className={`message assistant-message ${
+        last ? "latest" : ""
+      }`}
+    >
+      <div className="ai-avatar">
+        <SparkIcon />
+      </div>
+
+      <div>
+        <div className="message-meta">
+          <strong>Scope</strong>
+          <span>{model}</span>
+        </div>
+
+        <div className="message-body">
+          {message.content
+            .split("\n")
+            .filter(Boolean)
+            .map((part, index) => (
+              <p key={`${message.id}-${index}`}>
+                {part}
+              </p>
+            ))}
+        </div>
+      </div>
+    </article>
+  );
+}
+
+function Thinking({ mode }: { mode: BusyState }) {
+  return (
+    <article className="message assistant-message">
+      <div className="ai-avatar">
+        <SparkIcon />
+      </div>
+
+      <div>
+        <div className="message-meta">
+          <strong>Scope</strong>
+          <span>working</span>
+        </div>
+
+        <div className="thinking">
+          <i />
+          <i />
+          <i />
+
+          <span>
+            {mode === "plan"
+              ? "Tracing the request through the codebase and building a plan…"
+              : mode === "jira"
+                ? "Creating the approved Jira work…"
+                : "Reading the product context…"}
+          </span>
+        </div>
+      </div>
+    </article>
+  );
+}
+
+type PromptProps = {
+  n: string;
+  title: string;
+  text: string;
+  onClick: () => void;
+};
+
+function Prompt({
+  n,
+  title,
+  text,
+  onClick,
+}: PromptProps) {
+  return (
+    <button type="button" onClick={onClick}>
+      <span>{n}</span>
+
+      <p>
+        <strong>{title}</strong>
+        {text}
+      </p>
+
+      <ArrowIcon />
+    </button>
+  );
+}
+
+type ComposerProps = {
+  input: string;
+  setInput: (value: string) => void;
+  weeks: number;
+  setWeeks: (value: number) => void;
+  send: () => void;
+  generate: () => void;
+  disabled: boolean;
+  canGenerate: boolean;
+};
+
+function Composer({
+  input,
+  setInput,
+  weeks,
+  setWeeks,
+  send,
+  generate,
+  disabled,
+  canGenerate,
+}: ComposerProps) {
+  return (
+    <div className="composer-wrap">
+      <div className="composer">
+        <textarea
+          rows={1}
+          placeholder="Describe the feature, answer a question, or change the scope…"
+          value={input}
+          disabled={disabled}
+          onChange={(event) =>
+            setInput(event.target.value)
+          }
+          onKeyDown={(event) => {
+            if (
+              event.key === "Enter" &&
+              !event.shiftKey
+            ) {
+              event.preventDefault();
+              send();
+            }
+          }}
+        />
+
+        <div className="composer-tools">
+          <div className="timeline">
+            <span>Target</span>
+
+            <button
+              type="button"
+              aria-label="Reduce target duration"
+              disabled={disabled}
+              onClick={() =>
+                setWeeks(Math.max(1, weeks - 1))
+              }
+            >
+              −
+            </button>
+
+            <strong>{weeks} weeks</strong>
+
+            <button
+              type="button"
+              aria-label="Increase target duration"
+              disabled={disabled}
+              onClick={() =>
+                setWeeks(Math.min(52, weeks + 1))
+              }
+            >
+              ＋
+            </button>
+          </div>
+
+          <div className="composer-actions">
+            <button
+              type="button"
+              className="generate"
+              onClick={generate}
+              disabled={disabled || !canGenerate}
+            >
+              <SparkIcon />
+              Generate plan
+            </button>
+
+            <button
+              type="button"
+              className="send"
+              onClick={send}
+              disabled={
+                disabled || !input.trim()
+              }
+              aria-label="Send message"
+            >
+              <ArrowIcon />
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <small>
+        Claude can make mistakes. Engineering should
+        verify code evidence before Jira creation.
+      </small>
+    </div>
+  );
+}
+
+function ConfigBanner() {
+  return (
+    <div className="config-banner">
+      <span>Claude is not configured</span>
+
+      <p>
+        Add{" "}
+        <code>
+          ANTHROPIC_AUTH_TOKEN
+        </code>{" "}
+        and{" "}
+        <code>ANTHROPIC_BASE_URL</code> to{" "}
+        <code>backend/.env</code>, then restart FastAPI.
+      </p>
+    </div>
+  );
+}
+
+type ContextDrawerProps = {
+  drawer: Drawer;
+  close: () => void;
+  analysis: Analysis | null;
+  selectedOption: string | null;
+  setSelectedOption: (value: string) => void;
+  createJira: () => void;
+  busy: BusyState;
+  tree: RepoNode[];
+  file: RepoFile | null;
+  clearFile: () => void;
+  openFile: (path: string) => void;
+  jira: JiraIssue[];
+};
+
+function ContextDrawer({
+  drawer,
+  close,
+  analysis,
+  selectedOption,
+  setSelectedOption,
+  createJira,
+  busy,
+  tree,
+  file,
+  clearFile,
+  openFile,
+  jira,
+}: ContextDrawerProps) {
+  if (!drawer) {
+    return null;
+  }
+
+  const heading =
+    drawer === "artifact"
+      ? "GENERATED PLAN"
+      : drawer === "code"
+        ? "CODE EVIDENCE"
+        : "JIRA PREVIEW";
+
+  const title =
+    drawer === "artifact"
+      ? "Engineering brief"
+      : drawer === "code"
+        ? "ExpenseFlow"
+        : "ExpenseFlow board";
+
+  return (
+    <>
+      <button
+        type="button"
+        className="drawer-scrim"
+        aria-label="Close drawer"
+        onClick={close}
+      />
+
+      <aside className="context-drawer">
+        <div className="drawer-head">
+          <div>
+            <span>{heading}</span>
+            <strong>{title}</strong>
+          </div>
+
+          <button
+            type="button"
+            aria-label="Close drawer"
+            onClick={close}
+          >
+            ×
+          </button>
+        </div>
+
+        {drawer === "artifact" && (
+          <Artifact
+            analysis={analysis}
+            selected={selectedOption}
+            select={setSelectedOption}
+            createJira={createJira}
+            busy={busy}
+          />
+        )}
+
+        {drawer === "code" && (
+          <CodeBrowser
+            tree={tree}
+            file={file}
+            clearFile={clearFile}
+            openFile={openFile}
+          />
+        )}
+
+        {drawer === "jira" && (
+          <JiraPreview issues={jira} />
+        )}
+      </aside>
+    </>
+  );
+}
+
+type ArtifactProps = {
+  analysis: Analysis | null;
+  selected: string | null;
+  select: (value: string) => void;
+  createJira: () => void;
+  busy: BusyState;
+};
+
+function Artifact({
+  analysis,
+  selected,
+  select,
+  createJira,
+  busy,
+}: ArtifactProps) {
+  if (!analysis) {
+    return (
+      <div className="drawer-empty">
+        <LayersIcon />
+
+        <h2>No plan yet</h2>
+
+        <p>
+          Discuss the feature, then choose Generate plan.
+          Claude will create the analysis here without
+          taking you away from the conversation.
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="artifact">
+      <div className="verdict">
+        <span className={`risk ${analysis.risk}`}>
+          {analysis.risk} risk
+        </span>
+
+        <h2>{analysis.verdict}</h2>
+
+        <p>{analysis.summary}</p>
+
+        <div className="metrics">
+          <span>
+            <strong>
+              {analysis.feasibility}%
+            </strong>
+            Feasibility
+          </span>
+
+          <span>
+            <strong>
+              {analysis.timeline_confidence}%
+            </strong>
+            Timeline confidence
+          </span>
+        </div>
+      </div>
+
+      <SectionTitle
+        label="SCOPE OPTIONS"
+        count={analysis.options.length}
+      />
+
+      <div className="scope-options">
+        {analysis.options.map((option) => (
+          <Option
+            key={option.id}
+            option={option}
+            selected={selected === option.id}
+            choose={() => select(option.id)}
+          />
+        ))}
+      </div>
+
+      <SectionTitle
+        label="WORK ITEMS"
+        count={analysis.plan.length}
+      />
+
+      <div className="work-items">
+        {analysis.plan.map((item) => (
+          <div
+            key={item.temp_key}
+            className={`work-item ${item.type.toLowerCase()}`}
+          >
+            <span>{item.type[0]}</span>
+
+            <div>
+              <small>
+                {item.temp_key} ·{" "}
+                {item.discipline || "product"}
+              </small>
+
+              <strong>{item.title}</strong>
+            </div>
+
+            <b>{item.estimate ?? "–"}</b>
+          </div>
+        ))}
+      </div>
+
+      <SectionTitle
+        label="EVIDENCE"
+        count={analysis.evidence.length}
+      />
+
+      <div className="evidence-list">
+        {analysis.evidence.map((item) => (
+          <div key={item.id}>
+            <span className={item.type}>
+              {item.type === "verified"
+                ? "✓"
+                : item.type === "inferred"
+                  ? "≈"
+                  : "?"}
+            </span>
+
+            <p>
+              <strong>{item.title}</strong>
+
+              <small>
+                {item.path || item.detail}
+              </small>
+            </p>
+          </div>
+        ))}
+      </div>
+
+      <div className="approval-bar">
+        <p>
+          <CheckIcon />
+
+          <span>
+            <strong>
+              Human approval required
+            </strong>
+            Nothing is written to Jira until you
+            approve.
+          </span>
+        </p>
+
+        <button
+          type="button"
+          onClick={createJira}
+          disabled={
+            !selected || Boolean(busy)
+          }
+        >
+          <JiraIcon />
+
+          {busy === "jira"
+            ? "Creating…"
+            : "Approve & create in Jira"}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+type OptionProps = {
+  option: ScopeOption;
+  selected: boolean;
+  choose: () => void;
+};
+
+function Option({
+  option,
+  selected,
+  choose,
+}: OptionProps) {
+  return (
+    <button
+      type="button"
+      className={selected ? "selected" : ""}
+      onClick={choose}
+    >
+      <span>
+        {selected ? <CheckIcon /> : null}
+      </span>
+
+      <p>
+        <strong>
+          {option.name}
+
+          {option.recommended && (
+            <i>Recommended</i>
+          )}
+        </strong>
+
+        <small>
+          {option.duration} · {option.confidence}{" "}
+          confidence
+        </small>
+      </p>
+    </button>
+  );
+}
+
+function SectionTitle({
+  label,
+  count,
+}: {
+  label: string;
+  count: number;
+}) {
+  return (
+    <div className="section-title">
+      <span>{label}</span>
+      <b>{count}</b>
+    </div>
+  );
+}
+
+type CodeBrowserProps = {
+  tree: RepoNode[];
+  file: RepoFile | null;
+  clearFile: () => void;
+  openFile: (path: string) => void;
+};
+
+function CodeBrowser({
+  tree,
+  file,
+  clearFile,
+  openFile,
+}: CodeBrowserProps) {
+  if (!file) {
+    return (
+      <div className="code-browser">
+        <div className="tree">
+          {tree.map((node) => (
+            <Tree
+              node={node}
+              key={node.path}
+              openFile={openFile}
+            />
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="code-browser">
+      <button
+        type="button"
+        className="back-tree"
+        onClick={clearFile}
+      >
+        ← Repository files
+      </button>
+
+      <div className="file-path">
+        <CodeIcon />
+        {file.path}
+        <span>{file.lines} lines</span>
+      </div>
+
+      <pre>
+        {file.content.split("\n").map((line, index) => (
+          <div key={`${file.path}-${index}`}>
+            <span>{index + 1}</span>
+            <code>{line || " "}</code>
+          </div>
+        ))}
+      </pre>
+    </div>
+  );
+}
+
+type TreeProps = {
+  node: RepoNode;
+  openFile: (path: string) => void;
+  depth?: number;
+};
+
+function Tree({
+  node,
+  openFile,
+  depth = 0,
+}: TreeProps) {
+  const [open, setOpen] = useState(depth === 0);
+
+  return (
+    <>
+      <button
+        type="button"
+        style={{
+          paddingLeft: `${16 + depth * 13}px`,
+        }}
+        onClick={() => {
+          if (node.type === "folder") {
+            setOpen((current) => !current);
+          } else {
+            openFile(node.path);
+          }
+        }}
+      >
+        {node.type === "folder" ? (
+          <FolderIcon />
+        ) : (
+          <FileIcon />
+        )}
+
+        <span>{node.name}</span>
+      </button>
+
+      {open &&
+        node.children?.map((child) => (
+          <Tree
+            node={child}
+            key={child.path}
+            openFile={openFile}
+            depth={depth + 1}
+          />
+        ))}
+    </>
+  );
+}
+
+function JiraPreview({
+  issues,
+}: {
+  issues: JiraIssue[];
+}) {
+  const generatedIssues = issues.filter((issue) =>
+    issue.labels.includes("scope-generated"),
+  );
+
+  return (
+    <div className="jira-preview">
+      <div className="jira-summary">
+        <JiraIcon />
+
+        <p>
+          <strong>
+            {generatedIssues.length
+              ? `${generatedIssues.length} generated issues`
+              : "Mock Jira is ready"}
+          </strong>
+
+          <small>
+            {generatedIssues.length
+              ? "Created from the approved Scope plan"
+              : "Approve a generated plan to create linked work"}
+          </small>
+        </p>
+      </div>
+
+      {issues.map((issue) => (
+        <article key={issue.key}>
+          <span
+            className={issue.type.toLowerCase()}
+          >
+            {issue.type[0]}
+          </span>
+
+          <div>
+            <small>
+              {issue.key} · {issue.status}
+            </small>
+
+            <strong>{issue.summary}</strong>
+            <p>{issue.description}</p>
+          </div>
+
+          <b>{issue.estimate ?? "–"}</b>
+        </article>
+      ))}
+    </div>
+  );
+}

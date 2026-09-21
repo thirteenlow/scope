@@ -2,59 +2,67 @@ from fastapi.testclient import TestClient
 
 from app.main import app
 
+
 client = TestClient(app)
 
 
-def headers(user="bryan"):
-    return {"X-User-Id": user}
-
-
 def test_health():
-    response = client.get("/health")
+    response = client.get("/api/health")
     assert response.status_code == 200
-    assert response.json()["status"] == "healthy"
+    assert response.json()["product"] == "scope"
 
 
-def test_developer_sees_only_self_and_cannot_edit_other_user():
-    updates = client.get("/api/updates", headers=headers()).json()
-    assert len(updates) == 1
-    assert updates[0]["developer"]["id"] == "bryan"
-    denied = client.post("/api/updates/yam.nee/items", headers=headers(), json={"title": "Not allowed", "detail": "", "category": "blocker"})
-    assert denied.status_code == 403
+def test_bootstrap_contains_mock_integrations():
+    data = client.get("/api/bootstrap").json()
+    assert data["repository"]["name"] == "acme/expenseflow"
+    assert any(issue["key"] == "EXP-241" for issue in data["jira"])
+    assert any(member["name"] == "Weifa" and member["role"] == "Product manager" for member in data["team"])
 
 
-def test_pm_sees_and_can_edit_every_developer():
-    updates = client.get("/api/updates", headers=headers("weifa")).json()
-    assert len(updates) == 7
-    created = client.post("/api/updates/yam.nee/items", headers=headers("weifa"), json={"title": "PM-created follow-up", "detail": "Review during meeting", "category": "in_progress"})
-    assert created.status_code == 200
+def test_repository_tree_and_file():
+    tree = client.get("/api/repo/tree")
+    assert tree.status_code == 200
+    file = client.get("/api/repo/file", params={"path": "services/expense-api/app/routes/expenses.py"})
+    assert file.status_code == 200
+    assert "submitted expenses are immutable" in file.json()["content"]
 
 
-def test_commit_suggestions_include_evidence_links():
-    update = client.get("/api/updates", headers=headers()).json()[0]
-    assert update["suggestions"]
-    evidence = update["suggestions"][0]["evidence"]
-    assert any(item["source"] == "git" and item["url"] for item in evidence)
+def test_feature_flow_to_jira():
+    analysis = client.post("/api/features/FEAT-104/analyze")
+    assert analysis.status_code == 200
+    assert analysis.json()["risk"] == "high"
+    blocked = client.post("/api/features/FEAT-104/sync-jira")
+    assert blocked.status_code == 409
+    approval = client.post("/api/features/FEAT-104/approve", json={"option_id": "mvp"})
+    assert approval.status_code == 200
+    synced = client.post("/api/features/FEAT-104/sync-jira")
+    assert synced.status_code == 200
+    assert len(synced.json()) >= 5
+    assert synced.json()[0]["type"] == "Epic"
 
 
-def test_only_pm_can_save_meeting_notes():
-    denied = client.put("/api/meeting/notes", headers=headers(), json={"text": "Decision"})
-    assert denied.status_code == 403
-    allowed = client.put("/api/meeting/notes", headers=headers("weifa"), json={"text": "Decision"})
-    assert allowed.status_code == 200
+def test_feature_brief_can_be_updated_before_analysis():
+    payload = {"title": "Editable submitted expenses", "description": "Let employees correct submitted claims safely after submission.", "target_weeks": 6}
+    updated = client.put("/api/features/FEAT-104", json=payload)
+    assert updated.status_code == 200
+    assert updated.json()["target_weeks"] == 6
 
 
-def test_simulated_jira_issue_page_is_rendered():
-    response = client.get("/mock/jira/browse/OPS-261")
+def test_path_traversal_is_blocked():
+    response = client.get("/api/repo/file", params={"path": "../../README.md"})
+    assert response.status_code == 404
+
+
+def test_llm_status_reports_provider(monkeypatch):
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+    response = client.get("/api/llm/status")
     assert response.status_code == 200
-    assert "Jira Software" in response.text
-    assert "SIMULATED" in response.text
-    assert "Yam Nee" in response.text
+    assert response.json()["provider"] == "Anthropic"
+    assert response.json()["configured"] is False
 
 
-def test_simulated_github_commit_page_contains_diff():
-    response = client.get("/mock/git/commit/c8f42ad")
-    assert response.status_code == 200
-    assert "Pull requests" in response.text
-    assert "SIMULATED" in response.text
-    assert "src/services/claims.py" in response.text
+def test_chat_requires_server_side_key(monkeypatch):
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+    response = client.post("/api/chat", json={"messages": [{"role": "user", "content": "Add receipt OCR"}], "mode": "chat", "target_weeks": 4})
+    assert response.status_code == 503
+    assert "ANTHROPIC_API_KEY" in response.json()["detail"]
