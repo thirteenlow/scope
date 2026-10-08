@@ -163,8 +163,26 @@ def _extract_text(body: dict) -> str:
 
 def _system_prompt(
     mode: str,
-    target_weeks: int,
+    target_weeks: int | None,
 ) -> str:
+    if target_weeks is not None:
+        timeline_rule = (
+            f"- The requested delivery target is "
+            f"{target_weeks} week(s). Treat this as "
+            f"a hard constraint and calibrate scope "
+            f"options to fit or explain the gap."
+        )
+    else:
+        timeline_rule = (
+            "- No delivery timeline was specified. "
+            "When generating the plan, recommend a "
+            "realistic estimate based on the work "
+            "involved and include it in the "
+            "`estimated_weeks` field of the JSON "
+            "response. Explain your reasoning briefly "
+            "in the summary."
+        )
+
     shared = f"""
 You are Scope, a senior product-and-engineering
 planning partner embedded in an existing product
@@ -189,7 +207,7 @@ Rules:
   trivia.
 - Never claim that a Jira issue was created.
   The application handles that after human approval.
-- The requested target is {target_weeks} weeks.
+{timeline_rule}
 - Evidence paths must exactly match paths shown
   in repository context.
 
@@ -220,6 +238,7 @@ matching this structure:
 
 {
   "message": "Concise summary for the PM",
+  "estimated_weeks": null,
   "verdict": "Short feasibility verdict",
   "feasibility": 0,
   "timeline_confidence": 0,
@@ -273,13 +292,16 @@ Requirements:
 - Make estimates realistic.
 - Use 4-8 evidence items.
 - Prefer exact files and line numbers.
+- If no target was given, set `estimated_weeks`
+  to your recommended delivery window as an
+  integer (e.g. 4). Otherwise set it to null.
 """
 
 
 async def talk_to_claude(
     messages: list[ChatMessage],
     mode: str,
-    target_weeks: int,
+    target_weeks: int | None,
 ) -> tuple[
     str,
     AnalysisResult | None,
@@ -401,7 +423,7 @@ async def generate_prd(
     messages: list[ChatMessage],
     analysis: AnalysisResult,
     selected_option: ScopeOption,
-    target_weeks: int,
+    target_weeks: int | None,
 ) -> tuple[str, str]:
     # Validate credentials before generating.
     _headers()
@@ -437,7 +459,7 @@ Delivery window:
 {selected_option.duration}
 
 Requested target:
-{target_weeks} weeks
+{f"{target_weeks} weeks" if target_weeks is not None else f"Not specified — use estimated {analysis.estimated_weeks or selected_option.duration}"}
 
 Confidence:
 {selected_option.confidence}

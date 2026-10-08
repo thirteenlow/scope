@@ -740,6 +740,42 @@ button {
     padding: 0 7px
 }
 
+.timeline .timeline-clear-btn,
+.timeline .timeline-set-btn {
+    border: none;
+    background: transparent;
+    font: 7px 'DM Mono';
+    cursor: pointer;
+    padding: 0 3px;
+    width: auto;
+    height: auto;
+    line-height: 1;
+    text-decoration: underline;
+    text-underline-offset: 2px
+}
+
+.timeline .timeline-clear-btn {
+    color: #b0a8b7
+}
+
+.timeline .timeline-clear-btn:hover {
+    color: #8b8490
+}
+
+.timeline .timeline-set-btn {
+    color: #8b8490
+}
+
+.timeline .timeline-set-btn:hover {
+    color: #5e41cd
+}
+
+.timeline-estimate-label {
+    font: 8px 'DM Mono';
+    color: #8b8490;
+    font-style: italic
+}
+
 .composer-actions {
     margin-left: auto;
     gap: 6px
@@ -920,6 +956,25 @@ button {
     border-top: 1px solid #39353d;
     margin-top: 15px;
     padding-top: 13px
+}
+
+.estimated-weeks-badge {
+    grid-column: 1 / -1;
+    margin-top: 10px;
+    padding: 6px 10px;
+    background: #1e1a2a;
+    border: 1px solid #39353d;
+    border-radius: 6px;
+    font-size: 7px;
+    color: #918b96;
+    text-transform: uppercase
+}
+
+.estimated-weeks-badge strong {
+    display: block;
+    font: 16px 'DM Mono';
+    color: #a8d4f7;
+    margin-bottom: 2px
 }
 
 .metrics span {

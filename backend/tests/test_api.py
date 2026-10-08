@@ -16,7 +16,7 @@ def test_bootstrap_contains_mock_integrations():
     data = client.get("/api/bootstrap").json()
     assert data["repository"]["name"] == "northstar/pocketplan"
     assert any(issue["key"] == "BUD-241" for issue in data["jira"])
-    assert any(member["name"] == "Weifa" and member["role"] == "Product manager" for member in data["team"])
+    assert any(member["name"] == "Person" and member["role"] == "Product manager" for member in data["team"])
 
 
 def test_repository_tree_and_file():

@@ -393,7 +393,7 @@ def bootstrap() -> dict:
         "jira": list(state.jira.values()),
         "team": [
             {
-                "name": "Weifa",
+                "name": "Person",
                 "role": "Product manager",
                 "initials": "W",
             },

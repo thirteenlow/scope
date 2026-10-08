@@ -94,6 +94,7 @@ class AnalysisResult(BaseModel):
     options: list[ScopeOption]
     plan: list[PlanItem]
     questions: list[str]
+    estimated_weeks: int | None = None
 
 
 class ApprovalRequest(BaseModel):
@@ -152,8 +153,8 @@ class ChatRequest(BaseModel):
         "chat",
         "plan",
     ] = "chat"
-    target_weeks: int = Field(
-        default=4,
+    target_weeks: int | None = Field(
+        default=None,
         ge=1,
         le=52,
     )

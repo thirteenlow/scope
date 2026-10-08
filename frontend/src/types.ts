@@ -55,6 +55,7 @@ export type Analysis = {
   options: ScopeOption[];
   plan: PlanItem[];
   questions: string[];
+  estimated_weeks?: number | null;
 };
 
 export type JiraIssue = {
@@ -92,7 +93,7 @@ export type ChatResponse = { message: string; model: string; analysis?: Analysis
 export type ConversationSummary = {
   id: string;
   title: string;
-  target_weeks: number;
+  target_weeks: number | null;
   created_at: string;
   updated_at: string;
   message_count: number;

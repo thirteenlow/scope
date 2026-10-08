@@ -27,7 +27,7 @@ def initialize_database() -> None:
             CREATE TABLE IF NOT EXISTS conversations (
                 id TEXT PRIMARY KEY,
                 title TEXT NOT NULL,
-                target_weeks INTEGER NOT NULL DEFAULT 4,
+                target_weeks INTEGER,
                 created_at TEXT NOT NULL,
                 updated_at TEXT NOT NULL
             );
@@ -84,7 +84,39 @@ def initialize_database() -> None:
                 connection.execute(
                     f"ALTER TABLE plans ADD COLUMN {name} TEXT"
                 )
-                
+
+        # Migrate target_weeks to allow NULL (SQLite cannot ALTER COLUMN,
+        # so we recreate the conversations table when the old NOT NULL
+        # DEFAULT 4 constraint is still in place).
+        col_info = connection.execute(
+            "PRAGMA table_info(conversations)"
+        ).fetchall()
+        target_col = next(
+            (c for c in col_info if c["name"] == "target_weeks"), None
+        )
+        if target_col and target_col["notnull"]:
+            connection.executescript(
+                """
+                CREATE TABLE IF NOT EXISTS conversations_new (
+                    id TEXT PRIMARY KEY,
+                    title TEXT NOT NULL,
+                    target_weeks INTEGER,
+                    created_at TEXT NOT NULL,
+                    updated_at TEXT NOT NULL
+                );
+
+                INSERT INTO conversations_new
+                SELECT id, title,
+                    CASE WHEN target_weeks = 4 THEN NULL ELSE target_weeks END,
+                    created_at, updated_at
+                FROM conversations;
+
+                DROP TABLE conversations;
+
+                ALTER TABLE conversations_new RENAME TO conversations;
+                """
+            )
+
         # Repair titles shortened by older versions.
         title_rows = connection.execute(
             """
@@ -264,7 +296,7 @@ def save_exchange(
     conversation_id: str | None,
     messages: list[ChatMessage],
     assistant_message: str,
-    target_weeks: int,
+    target_weeks: int | None,
     analysis: AnalysisResult | None,
 ) -> str:
     identifier = conversation_id or str(uuid4())

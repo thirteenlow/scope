@@ -1,6 +1,6 @@
 # Scope
 
-Scope is a code-aware feature planning assistant. A product manager discusses a feature and target timeline with Claude; Scope supplies context from a simulated existing personal budgeting product (PocketPlan), turns the conversation into evidence-backed scope options and engineering work, and syncs approved work into a simulated Jira workspace.
+Scope is a code-aware feature planning assistant. A PM discusses a feature and target timeline with Claude; Scope supplies context from a simulated existing personal budgeting product (PocketPlan), turns the conversation into evidence-backed scope options and engineering work, and syncs approved work into a simulated Jira workspace.
 
 The project intentionally uses local mock integrations so it can be demonstrated without access to a company repository or Jira tenant.
 

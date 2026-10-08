@@ -137,7 +137,7 @@ export const api = {
   chat: (
     messages: ChatMessage[],
     mode: "chat" | "plan",
-    targetWeeks: number,
+    targetWeeks: number | null,
     conversationId?: string | null,
   ) =>
     request<ChatResponse>(

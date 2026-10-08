@@ -18,7 +18,7 @@ class AppState:
             title="Category balance rollover",
             description="Allow users to carry unused category money into the next month. We need this within four weeks.",
             target_weeks=4,
-            owner="Weifa",
+            owner="Person",
             status="draft",
             created_at="2026-09-21T09:30:00Z",
         )
@@ -32,7 +32,7 @@ class AppState:
 
     def create_feature(self, payload: FeatureCreate) -> FeatureRequest:
         identifier = f"FEAT-{105 + len(self.features) - 1}"
-        feature = FeatureRequest(id=identifier, owner="Weifa", status="draft", created_at=datetime.now(UTC).isoformat(), **payload.model_dump())
+        feature = FeatureRequest(id=identifier, owner="Person", status="draft", created_at=datetime.now(UTC).isoformat(), **payload.model_dump())
         self.features[identifier] = feature
         return feature
 

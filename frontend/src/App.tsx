@@ -32,7 +32,7 @@ const starterMessage: ChatMessage = {
   id: "welcome",
   role: "assistant",
   content:
-    "Hi Weifa — I’m connected to the PocketPlan codebase. Tell me what you want to build for individual budgeters and the delivery window. I’ll ask only the questions that materially change the plan.",
+    "Hi Person — I’m connected to the PocketPlan codebase. Tell me what you want to build for individual budgeters and the delivery window. I’ll ask only the questions that materially change the plan.",
   createdAt: "Now",
 };
 type Drawer = "artifact" | "code" | null;
@@ -66,7 +66,7 @@ export default function App() {
   const [conversationId, setConversationId] = useState<string | null>(null);
   const [productFeatures, setProductFeatures] = useState<ProductFeature[]>([]);
   const [input, setInput] = useState("");
-  const [weeks, setWeeks] = useState(4);
+  const [weeks, setWeeks] = useState<number | null>(4);
   const [analysis, setAnalysis] = useState<Analysis | null>(null);
   const [selectedOption, setSelectedOption] = useState<string | null>(null);
   const [prd, setPrd] = useState<string | null>(null);
@@ -495,6 +495,7 @@ export default function App() {
         file={file}
         clearFile={() => setFile(null)}
         openFile={openFile}
+        weeks={weeks}
       />
     </div>
   );
@@ -652,8 +653,8 @@ function Sidebar({
       <div className="side-footer">
         <div className="avatar">W</div>
         <span>
-          <strong>Weifa</strong>
-          <small>Product manager</small>
+          <strong>Person</strong>
+          <small>PM</small>
         </span>
         <button
           className="collapse-button"
@@ -827,8 +828,8 @@ function Composer({
 }: {
   input: string;
   setInput: (value: string) => void;
-  weeks: number;
-  setWeeks: (value: number) => void;
+  weeks: number | null;
+  setWeeks: (value: number | null) => void;
   send: () => void;
   generate: () => void;
   disabled: boolean;
@@ -852,11 +853,30 @@ function Composer({
         <div className="composer-tools">
           <div className="timeline">
             <span>Target</span>
-            <button onClick={() => setWeeks(Math.max(1, weeks - 1))}>−</button>
-            <strong>{weeks} weeks</strong>
-            <button onClick={() => setWeeks(Math.min(52, weeks + 1))}>
-              ＋
-            </button>
+            {weeks !== null ? (
+              <>
+                <button onClick={() => setWeeks(Math.max(1, weeks - 1))}>−</button>
+                <strong>{weeks} week{weeks === 1 ? "" : "s"}</strong>
+                <button onClick={() => setWeeks(Math.min(52, weeks + 1))}>＋</button>
+                <button
+                  className="timeline-clear-btn"
+                  onClick={() => setWeeks(null)}
+                  title="Let Scope estimate the timeline instead"
+                >
+                  or estimate
+                </button>
+              </>
+            ) : (
+              <>
+                <span className="timeline-estimate-label">Scope will estimate</span>
+                <button
+                  className="timeline-set-btn"
+                  onClick={() => setWeeks(4)}
+                >
+                  set target
+                </button>
+              </>
+            )}
           </div>
           <div className="composer-actions">
             <button
@@ -1145,6 +1165,7 @@ function ContextDrawer({
   file,
   clearFile,
   openFile,
+  weeks,
 }: {
   drawer: Drawer;
   close: () => void;
@@ -1163,6 +1184,7 @@ function ContextDrawer({
   file: RepoFile | null;
   clearFile: () => void;
   openFile: (path: string) => void;
+  weeks: number | null;
 }) {
   if (!drawer) return null;
   return (
@@ -1193,6 +1215,7 @@ function ContextDrawer({
             createJira={createJira}
             viewJira={viewJira}
             busy={busy}
+            weeks={weeks}
           />
         ) : (
           <CodeBrowser
@@ -1219,6 +1242,7 @@ function Artifact({
   createJira,
   viewJira,
   busy,
+  weeks,
 }: {
   analysis: Analysis | null;
   selected: string | null;
@@ -1231,6 +1255,7 @@ function Artifact({
   createJira: () => void;
   viewJira: () => void;
   busy: string;
+  weeks: number | null;
 }) {
   const [tab, setTab] = useState<"plan" | "prd">("plan");
   useEffect(() => {
@@ -1361,6 +1386,12 @@ function Artifact({
                 </strong>
                 {activeOption ? "Confidence" : "Timeline confidence"}
               </span>
+              {weeks === null && analysis.estimated_weeks != null && (
+                <span className="estimated-weeks-badge">
+                  <strong>{analysis.estimated_weeks}w</strong>
+                  Scope's estimate
+                </span>
+              )}
             </div>
           </div>
           <SectionTitle label="SCOPE OPTIONS" count={analysis.options.length} />
