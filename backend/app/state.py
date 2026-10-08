@@ -15,8 +15,8 @@ class AppState:
     def _seed(self) -> None:
         feature = FeatureRequest(
             id="FEAT-104",
-            title="Editable submitted expenses",
-            description="Allow employees to edit an expense for 24 hours after submission. We need this within four weeks.",
+            title="Category balance rollover",
+            description="Allow users to carry unused category money into the next month. We need this within four weeks.",
             target_weeks=4,
             owner="Weifa",
             status="draft",
@@ -24,9 +24,9 @@ class AppState:
         )
         self.features[feature.id] = feature
         seeds = [
-            JiraIssue(key="EXP-241", type="Epic", summary="Receipt OCR capture", description="Extract receipt details and let employees verify them.", status="In Progress", estimate=34, assignee="Bryan", labels=["expenseflow", "ai"]),
-            JiraIssue(key="EXP-256", type="Story", summary="Show OCR confidence per field", description="Highlight low-confidence values before submission.", status="In Review", parent="EXP-241", estimate=5, assignee="Yi San", labels=["frontend"], evidence_paths=["apps/web/src/features/expenses/ExpenseForm.tsx"]),
-            JiraIssue(key="EXP-263", type="Task", summary="Retry failed reimbursement events", description="Add idempotent retries for provider timeouts.", status="To Do", estimate=3, assignee="Roland", labels=["backend"]),
+            JiraIssue(key="BUD-241", type="Epic", summary="Bank transaction import", description="Import and normalize personal bank transactions.", status="In Progress", estimate=34, assignee="Bryan", labels=["pocketplan", "integration"]),
+            JiraIssue(key="BUD-256", type="Story", summary="Create merchant category rules", description="Let users automatically categorize familiar merchants.", status="In Review", parent="BUD-241", estimate=5, assignee="Yi San", labels=["frontend"], evidence_paths=["services/transaction-service/app/import_rules.py"]),
+            JiraIssue(key="BUD-263", type="Task", summary="Add recurring bill reminders", description="Schedule reminders before a personal bill is due.", status="To Do", estimate=3, assignee="Roland", labels=["backend"]),
         ]
         self.jira = {issue.key: issue for issue in seeds}
 
@@ -63,7 +63,7 @@ class AppState:
         next_number = max([int(key.split("-")[1]) for key in self.jira] + [263]) + 1
         evidence_map = {item.id: item for item in analysis.evidence}
         for item in analysis.plan:
-            key = f"EXP-{next_number}"
+            key = f"BUD-{next_number}"
             next_number += 1
             mapping[item.temp_key] = key
             paths = [evidence_map[evidence_id].path for evidence_id in item.evidence_ids if evidence_id in evidence_map and evidence_map[evidence_id].path]

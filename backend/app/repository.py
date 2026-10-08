@@ -2,7 +2,7 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[2]
-REPO_ROOT = ROOT / "mock-expenseflow"
+REPO_ROOT = ROOT / "mock-pocketplan"
 
 
 def _safe_path(relative_path: str) -> Path:
@@ -42,11 +42,11 @@ def read_file(relative_path: str) -> dict:
 def repository_summary() -> dict:
     files = [path for path in REPO_ROOT.rglob("*") if path.is_file() and not path.name.startswith(".")]
     return {
-        "name": "acme/expenseflow",
+        "name": "northstar/pocketplan",
         "branch": "main",
         "commit": "8c4f1a2",
         "files": len(files),
-        "services": 4,
+        "services": 3,
         "languages": [{"name": "TypeScript", "value": 62}, {"name": "Python", "value": 31}, {"name": "Other", "value": 7}],
         "indexed_at": "2026-09-21T09:42:00Z",
     }
@@ -57,18 +57,18 @@ def context_for_llm(max_chars: int = 45_000) -> str:
     priority = [
         "README.md",
         "docs/architecture.md",
-        "docs/expense-workflow.md",
-        "docs/decisions/ADR-014-immutable-submissions.md",
-        "services/expense-api/app/routes/expenses.py",
-        "services/expense-api/app/services/submission.py",
-        "services/expense-api/app/models/expense.py",
-        "services/expense-api/app/models/audit.py",
-        "services/approval-service/app/policy.py",
-        "services/approval-service/app/handlers.py",
+        "docs/monthly-budget-cycle.md",
+        "docs/decisions/ADR-008-independent-budget-months.md",
+        "services/budget-api/app/routes/budgets.py",
+        "services/budget-api/app/services/month_close.py",
+        "services/budget-api/app/services/allocation.py",
+        "services/budget-api/app/models/budget.py",
+        "services/transaction-service/app/import_rules.py",
         "services/notification-service/app/handlers.py",
-        "apps/web/src/api/expenses.ts",
-        "apps/web/src/features/expenses/ExpenseForm.tsx",
-        "packages/shared-types/src/index.ts",
+        "apps/web/src/api/budgets.ts",
+        "apps/web/src/features/budget/BudgetMonth.tsx",
+        "apps/web/src/features/budget/CategoryRow.tsx",
+        "packages/domain/src/index.ts",
         "database/schema.sql",
     ]
     sections: list[str] = []

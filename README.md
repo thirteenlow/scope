@@ -1,6 +1,6 @@
 # Scope
 
-Scope is a code-aware feature planning assistant. A product manager discusses a feature and target timeline with Claude; Scope supplies context from a simulated existing product (ExpenseFlow), turns the conversation into evidence-backed scope options and engineering work, and syncs approved work into a simulated Jira workspace.
+Scope is a code-aware feature planning assistant. A product manager discusses a feature and target timeline with Claude; Scope supplies context from a simulated existing personal budgeting product (PocketPlan), turns the conversation into evidence-backed scope options and engineering work, and syncs approved work into a simulated Jira workspace.
 
 The project intentionally uses local mock integrations so it can be demonstrated without access to a company repository or Jira tenant.
 
@@ -8,9 +8,9 @@ The project intentionally uses local mock integrations so it can be demonstrated
 
 - Frontend: React 19, TypeScript, Vite
 - Backend: FastAPI, Pydantic, pytest
-- Mock existing product: `mock-expenseflow/`
+- Mock existing product: `mock-pocketplan/`
 - LLM: Anthropic Messages API (Claude), called only from FastAPI
-- Simulated integrations: ExpenseFlow repository browser and Jira issue workspace
+- Simulated integrations: PocketPlan repository browser and Jira issue workspace
 
 ## Run it
 
@@ -30,15 +30,16 @@ source .venv/bin/activate
 
 pip install -r requirements.txt
 
-# Copy .env.example to .env, then add your Anthropic API key
+# Copy .env.example to .env, then add your gateway credentials
 # Windows PowerShell:
 Copy-Item .env.example .env
 
 # Edit .env so it contains:
-# ANTHROPIC_API_KEY=your_real_key_here
-# ANTHROPIC_MODEL=claude-sonnet-5
+# ANTHROPIC_AUTH_TOKEN=your_real_token_here
+# ANTHROPIC_BASE_URL=https://llm-gateway.aisg.sg/
+# ANTHROPIC_MODEL=claude-sonnet-4-6
 
-uvicorn app.main:app --reload --port 8000
+python -m uvicorn app.main:app --reload --port 8000
 ```
 
 ### Frontend
@@ -53,7 +54,7 @@ Open <http://localhost:5173>. The frontend expects the API at `http://localhost:
 
 ## Recommended demo
 
-1. Ask Scope: “Allow employees to edit a submitted expense for 24 hours. We need it within four weeks.”
+1. Ask Scope: “Allow users to carry unused category money into the next month. We need it within four weeks.”
 2. Answer Claude's high-value clarification questions in the same conversation.
 3. Click **Generate plan** when the brief is ready.
 4. Compare the generated scope options in the plan drawer.
@@ -62,9 +63,9 @@ Open <http://localhost:5173>. The frontend expects the API at `http://localhost:
 
 ## What is simulated
 
-- Repository indexing and file citations read the local `mock-expenseflow` directory.
+- Repository indexing and file citations read the local `mock-pocketplan` directory.
 - Repository access and Jira writes are simulated locally.
-- Feature discussion and plan generation use the real Anthropic API when `ANTHROPIC_API_KEY` is configured.
+- Feature discussion and plan generation use Claude through the configured Anthropic-compatible gateway.
 - Jira creation writes to in-memory backend state and resets when the API restarts.
 
 ## API-key safety
@@ -72,7 +73,7 @@ Open <http://localhost:5173>. The frontend expects the API at `http://localhost:
 - Put the key only in `backend/.env`; never add it to `frontend/.env`.
 - `.env` is excluded by `.gitignore` and must not be committed.
 - The browser sends conversation text to FastAPI. FastAPI adds code context and calls Anthropic server-side.
-- The prototype sends selected ExpenseFlow source files to Claude. A production version should add repository permissions, secret scanning, context redaction, audit logging, and retention controls.
+- The prototype sends selected PocketPlan source files to Claude. A production version should add repository permissions, secret scanning, context redaction, audit logging, and retention controls.
 
 ## Replacing mocks with real integrations
 

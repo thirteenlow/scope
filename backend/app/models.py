@@ -4,22 +4,40 @@ from pydantic import BaseModel, Field
 
 
 class FeatureCreate(BaseModel):
-    title: str = Field(min_length=3, max_length=120)
-    description: str = Field(min_length=10, max_length=2000)
-    target_weeks: int = Field(ge=1, le=52)
+    title: str = Field(
+        min_length=3,
+        max_length=120,
+    )
+    description: str = Field(
+        min_length=10,
+        max_length=2000,
+    )
+    target_weeks: int = Field(
+        ge=1,
+        le=52,
+    )
 
 
 class FeatureRequest(FeatureCreate):
     id: str
     owner: str
-    status: Literal["draft", "analyzed", "approved", "synced"]
+    status: Literal[
+        "draft",
+        "analyzed",
+        "approved",
+        "synced",
+    ]
     created_at: str
     selected_option: str | None = None
 
 
 class Evidence(BaseModel):
     id: str
-    type: Literal["verified", "inferred", "question"]
+    type: Literal[
+        "verified",
+        "inferred",
+        "question",
+    ]
     title: str
     detail: str
     path: str | None = None
@@ -31,7 +49,11 @@ class ScopeOption(BaseModel):
     id: str
     name: str
     duration: str
-    confidence: Literal["high", "medium", "low"]
+    confidence: Literal[
+        "high",
+        "medium",
+        "low",
+    ]
     summary: str
     includes: list[str]
     excludes: list[str]
@@ -40,13 +62,20 @@ class ScopeOption(BaseModel):
 
 class PlanItem(BaseModel):
     temp_key: str
-    type: Literal["Epic", "Story", "Task", "Spike"]
+    type: Literal[
+        "Epic",
+        "Story",
+        "Task",
+        "Spike",
+    ]
     title: str
     description: str
     parent: str | None = None
     estimate: int | None = None
     discipline: str | None = None
-    evidence_ids: list[str] = []
+    evidence_ids: list[str] = Field(
+        default_factory=list
+    )
 
 
 class AnalysisResult(BaseModel):
@@ -54,7 +83,11 @@ class AnalysisResult(BaseModel):
     verdict: str
     feasibility: int
     timeline_confidence: int
-    risk: Literal["low", "medium", "high"]
+    risk: Literal[
+        "low",
+        "medium",
+        "high",
+    ]
     summary: str
     affected_areas: list[str]
     evidence: list[Evidence]
@@ -69,33 +102,62 @@ class ApprovalRequest(BaseModel):
 
 class JiraIssue(BaseModel):
     key: str
-    type: Literal["Epic", "Story", "Task", "Spike"]
+    type: Literal[
+        "Epic",
+        "Story",
+        "Task",
+        "Spike",
+    ]
     summary: str
     description: str
     status: str
     parent: str | None = None
     estimate: int | None = None
     assignee: str | None = None
-    labels: list[str] = []
-    evidence_paths: list[str] = []
+    labels: list[str] = Field(
+        default_factory=list
+    )
+    evidence_paths: list[str] = Field(
+        default_factory=list
+    )
 
 
 class RepoNode(BaseModel):
     name: str
     path: str
-    type: Literal["file", "folder"]
+    type: Literal[
+        "file",
+        "folder",
+    ]
     children: list["RepoNode"] | None = None
 
 
 class ChatMessage(BaseModel):
-    role: Literal["user", "assistant"]
-    content: str = Field(min_length=1, max_length=8000)
+    role: Literal[
+        "user",
+        "assistant",
+    ]
+    content: str = Field(
+        min_length=1,
+        max_length=8000,
+    )
 
 
 class ChatRequest(BaseModel):
-    messages: list[ChatMessage] = Field(min_length=1, max_length=30)
-    mode: Literal["chat", "plan"] = "chat"
-    target_weeks: int = Field(default=4, ge=1, le=52)
+    messages: list[ChatMessage] = Field(
+        min_length=1,
+        max_length=100,
+    )
+    mode: Literal[
+        "chat",
+        "plan",
+    ] = "chat"
+    target_weeks: int = Field(
+        default=4,
+        ge=1,
+        le=52,
+    )
+    conversation_id: str | None = None
 
 
 class ChatResponse(BaseModel):
@@ -103,6 +165,7 @@ class ChatResponse(BaseModel):
     model: str
     analysis: AnalysisResult | None = None
     feature_id: str | None = None
+    conversation_id: str
 
 
 class LlmStatus(BaseModel):

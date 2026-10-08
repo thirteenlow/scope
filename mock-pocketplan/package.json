@@ -1,0 +1,7 @@
+{
+  "name": "pocketplan",
+  "private": true,
+  "workspaces": ["apps/*", "packages/*"],
+  "scripts": {"test": "echo mock-monorepo", "lint": "echo mock-monorepo"}
+}
+

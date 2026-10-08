@@ -1,4 +1,4 @@
-export type View = "brief" | "analysis" | "plan" | "codebase" | "jira";
+export type Screen = "chat" | "features" | "jira";
 
 export type Feature = {
   id: string;
@@ -87,4 +87,42 @@ export type ChatMessage = {
 };
 
 export type LlmStatus = { configured: boolean; provider: string; model: string };
-export type ChatResponse = { message: string; model: string; analysis?: Analysis; feature_id?: string };
+export type ChatResponse = { message: string; model: string; analysis?: Analysis; feature_id?: string; conversation_id: string };
+
+export type ConversationSummary = {
+  id: string;
+  title: string;
+  target_weeks: number;
+  created_at: string;
+  updated_at: string;
+  message_count: number;
+  has_plan: boolean;
+};
+
+export type ConversationDetail = Omit<ConversationSummary, "message_count" | "has_plan"> & {
+  messages: { id: string; role: "user" | "assistant"; content: string; created_at: string }[];
+  analysis: Analysis | null;
+  selected_option: string | null;
+  prd_markdown: string | null;
+  prd_model: string | null;
+  prd_updated_at: string | null;
+  jira_synced_at: string | null;
+  jira_issue_keys: string[];
+};
+
+export type PrdResponse = {
+  markdown: string;
+  model: string;
+  selected_option: string;
+};
+
+export type ProductFeature = {
+  id: string;
+  name: string;
+  summary: string;
+  category: string;
+  status: string;
+  capabilities: string[];
+  evidence_paths: string[];
+  accent: "violet" | "blue" | "orange" | "green" | "pink" | "cyan";
+};

@@ -5,4 +5,5 @@ backend/.venv/
 **/.pytest_cache/
 *.pyc
 .env
-
+backend/data/*.db
+backend/data/*.db-*

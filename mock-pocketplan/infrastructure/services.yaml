@@ -1,0 +1,10 @@
+services:
+  budget-api:
+    replicas: 3
+    owner: budget-platform
+  transaction-service:
+    replicas: 2
+    owner: data-integrations
+  notification-service:
+    replicas: 2
+    owner: platform
